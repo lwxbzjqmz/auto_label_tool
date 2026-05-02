@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Auto Label Tool</title>
+    <link rel="stylesheet" href="/frontend/style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="top-bar">
+            <h1>自动标注工具</h1>
+            <button id="refreshBtn">刷新图片列表</button>
+        </header>
+
+        <main class="main-layout">
+            <aside class="left-panel">
+                <h2>图片列表</h2>
+                <div id="imageCount">图片数量：0</div>
+                <ul id="imageList"></ul>
+            </aside>
+
+            <section class="center-panel">
+                <h2>图片预览</h2>
+                <div class="preview-box">
+                    <img id="previewImage" alt="请选择一张图片">
+                </div>
+            </section>
+
+            <aside class="right-panel">
+                <h2>当前信息</h2>
+                <p id="currentImageName">当前图片：无</p>
+                <p id="statusText">状态：等待加载图片</p>
+            </aside>
+        </main>
+    </div>
+
+    <script src="/frontend/main.js"></script>
+</body>
+</html>
