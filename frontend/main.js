@@ -1,11 +1,35 @@
 const imageListEl = document.getElementById("imageList");
 const imageCountEl = document.getElementById("imageCount");
-const previewImageEl = document.getElementById("previewImage");
 const currentImageNameEl = document.getElementById("currentImageName");
 const statusTextEl = document.getElementById("statusText");
 const refreshBtn = document.getElementById("refreshBtn");
 
+const canvas = document.getElementById("imageCanvas");
+const ctx = canvas.getContext("2d");
+
+const boxListEl = document.getElementById("boxList");
+const boxCountEl = document.getElementById("boxCount");
+const deleteBoxBtn = document.getElementById("deleteBoxBtn");
+const clearBoxesBtn = document.getElementById("clearBoxesBtn");
+
 let currentImageName = null;
+let currentImage = null;
+
+let boxes = [];
+let selectedBoxIndex = -1;
+
+let isDrawing = false;
+let startPoint = null;
+let currentPoint = null;
+
+// 图片在 canvas 中的显示信息
+let imageView = {
+    offsetX: 0,
+    offsetY: 0,
+    drawWidth: 0,
+    drawHeight: 0,
+    scale: 1
+};
 
 
 async function loadImageList() {
@@ -55,22 +79,391 @@ function renderImageList(images) {
 
 function selectImage(imageName, liElement) {
     currentImageName = imageName;
+    boxes = [];
+    selectedBoxIndex = -1;
 
     document.querySelectorAll("#imageList li").forEach(li => {
         li.classList.remove("active");
     });
     liElement.classList.add("active");
 
-    previewImageEl.src = `/api/image/${encodeURIComponent(imageName)}`;
-    previewImageEl.style.display = "block";
+    currentImage = new Image();
 
-    currentImageNameEl.textContent = `当前图片：${imageName}`;
-    statusTextEl.textContent = "状态：图片已加载";
+    currentImage.onload = () => {
+        resizeCanvasToDisplaySize();
+        redrawCanvas();
+        renderBoxList();
+
+        currentImageNameEl.textContent = `当前图片：${imageName}`;
+        statusTextEl.textContent = `状态：图片已加载，原图尺寸 ${currentImage.naturalWidth} × ${currentImage.naturalHeight}`;
+    };
+
+    currentImage.onerror = () => {
+        statusTextEl.textContent = "状态：图片加载失败";
+    };
+
+    currentImage.src = `/api/image/${encodeURIComponent(imageName)}`;
 }
+
+
+function resizeCanvasToDisplaySize() {
+    const rect = canvas.getBoundingClientRect();
+
+    canvas.width = Math.floor(rect.width);
+    canvas.height = Math.floor(rect.height);
+}
+
+
+function updateImageView() {
+    if (!currentImage) {
+        return;
+    }
+
+    const imgW = currentImage.naturalWidth;
+    const imgH = currentImage.naturalHeight;
+
+    const canvasW = canvas.width;
+    const canvasH = canvas.height;
+
+    const scale = Math.min(canvasW / imgW, canvasH / imgH);
+
+    const drawWidth = imgW * scale;
+    const drawHeight = imgH * scale;
+
+    const offsetX = (canvasW - drawWidth) / 2;
+    const offsetY = (canvasH - drawHeight) / 2;
+
+    imageView = {
+        offsetX,
+        offsetY,
+        drawWidth,
+        drawHeight,
+        scale
+    };
+}
+
+
+function redrawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!currentImage) {
+        drawEmptyHint();
+        return;
+    }
+
+    updateImageView();
+
+    ctx.drawImage(
+        currentImage,
+        imageView.offsetX,
+        imageView.offsetY,
+        imageView.drawWidth,
+        imageView.drawHeight
+    );
+
+    drawAllBoxes();
+
+    if (isDrawing && startPoint && currentPoint) {
+        drawTempBox();
+    }
+}
+
+
+function drawEmptyHint() {
+    ctx.fillStyle = "#777";
+    ctx.font = "18px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("请从左侧选择一张图片", canvas.width / 2, canvas.height / 2);
+}
+
+
+function drawAllBoxes() {
+    for (let i = 0; i < boxes.length; i++) {
+        const box = boxes[i];
+        const canvasBox = imageBoxToCanvasBox(box);
+
+        ctx.lineWidth = i === selectedBoxIndex ? 3 : 2;
+        ctx.strokeStyle = i === selectedBoxIndex ? "#ff0000" : "#00aa00";
+
+        ctx.strokeRect(
+            canvasBox.x,
+            canvasBox.y,
+            canvasBox.w,
+            canvasBox.h
+        );
+
+        ctx.fillStyle = i === selectedBoxIndex ? "#ff0000" : "#00aa00";
+        ctx.font = "14px Arial";
+        ctx.fillText(
+            `object ${i + 1}`,
+            canvasBox.x + 4,
+            canvasBox.y + 16
+        );
+    }
+}
+
+
+function drawTempBox() {
+    const x = Math.min(startPoint.x, currentPoint.x);
+    const y = Math.min(startPoint.y, currentPoint.y);
+    const w = Math.abs(currentPoint.x - startPoint.x);
+    const h = Math.abs(currentPoint.y - startPoint.y);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#0066ff";
+    ctx.strokeRect(x, y, w, h);
+}
+
+
+function getMousePosition(event) {
+    const rect = canvas.getBoundingClientRect();
+
+    return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+    };
+}
+
+
+function isPointInsideDisplayedImage(point) {
+    return (
+        point.x >= imageView.offsetX &&
+        point.x <= imageView.offsetX + imageView.drawWidth &&
+        point.y >= imageView.offsetY &&
+        point.y <= imageView.offsetY + imageView.drawHeight
+    );
+}
+
+
+function canvasPointToImagePoint(point) {
+    const x = (point.x - imageView.offsetX) / imageView.scale;
+    const y = (point.y - imageView.offsetY) / imageView.scale;
+
+    return {
+        x: clamp(Math.round(x), 0, currentImage.naturalWidth),
+        y: clamp(Math.round(y), 0, currentImage.naturalHeight)
+    };
+}
+
+
+function imagePointToCanvasPoint(point) {
+    return {
+        x: imageView.offsetX + point.x * imageView.scale,
+        y: imageView.offsetY + point.y * imageView.scale
+    };
+}
+
+
+function imageBoxToCanvasBox(box) {
+    const p1 = imagePointToCanvasPoint({ x: box[0], y: box[1] });
+    const p2 = imagePointToCanvasPoint({ x: box[2], y: box[3] });
+
+    return {
+        x: p1.x,
+        y: p1.y,
+        w: p2.x - p1.x,
+        h: p2.y - p1.y
+    };
+}
+
+
+function clamp(value, minValue, maxValue) {
+    return Math.max(minValue, Math.min(maxValue, value));
+}
+
+
+function makeImageBoxFromCanvasPoints(p1, p2) {
+    const imgP1 = canvasPointToImagePoint(p1);
+    const imgP2 = canvasPointToImagePoint(p2);
+
+    const xmin = Math.min(imgP1.x, imgP2.x);
+    const ymin = Math.min(imgP1.y, imgP2.y);
+    const xmax = Math.max(imgP1.x, imgP2.x);
+    const ymax = Math.max(imgP1.y, imgP2.y);
+
+    return [xmin, ymin, xmax, ymax];
+}
+
+
+function findBoxAtCanvasPoint(point) {
+    for (let i = boxes.length - 1; i >= 0; i--) {
+        const b = imageBoxToCanvasBox(boxes[i]);
+
+        if (
+            point.x >= b.x &&
+            point.x <= b.x + b.w &&
+            point.y >= b.y &&
+            point.y <= b.y + b.h
+        ) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+
+function renderBoxList() {
+    boxListEl.innerHTML = "";
+    boxCountEl.textContent = `框数量：${boxes.length}`;
+
+    if (boxes.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "暂无框，请在图片上拖动画框";
+        boxListEl.appendChild(li);
+        return;
+    }
+
+    for (let i = 0; i < boxes.length; i++) {
+        const box = boxes[i];
+
+        const li = document.createElement("li");
+        li.textContent = `${i + 1}: [${box[0]}, ${box[1]}, ${box[2]}, ${box[3]}]`;
+
+        if (i === selectedBoxIndex) {
+            li.classList.add("active");
+        }
+
+        li.addEventListener("click", () => {
+            selectedBoxIndex = i;
+            renderBoxList();
+            redrawCanvas();
+        });
+
+        boxListEl.appendChild(li);
+    }
+}
+
+
+canvas.addEventListener("mousedown", (event) => {
+    if (!currentImage) {
+        return;
+    }
+
+    resizeCanvasToDisplaySize();
+    updateImageView();
+
+    const point = getMousePosition(event);
+
+    if (!isPointInsideDisplayedImage(point)) {
+        return;
+    }
+
+    const hitIndex = findBoxAtCanvasPoint(point);
+
+    if (hitIndex !== -1) {
+        selectedBoxIndex = hitIndex;
+        renderBoxList();
+        redrawCanvas();
+        return;
+    }
+
+    isDrawing = true;
+    startPoint = point;
+    currentPoint = point;
+    selectedBoxIndex = -1;
+
+    redrawCanvas();
+});
+
+
+canvas.addEventListener("mousemove", (event) => {
+    if (!isDrawing) {
+        return;
+    }
+
+    currentPoint = getMousePosition(event);
+
+    // 限制临时框不要画到图片显示区域外面
+    currentPoint.x = clamp(
+        currentPoint.x,
+        imageView.offsetX,
+        imageView.offsetX + imageView.drawWidth
+    );
+
+    currentPoint.y = clamp(
+        currentPoint.y,
+        imageView.offsetY,
+        imageView.offsetY + imageView.drawHeight
+    );
+
+    redrawCanvas();
+});
+
+
+canvas.addEventListener("mouseup", () => {
+    if (!isDrawing) {
+        return;
+    }
+
+    isDrawing = false;
+
+    const newBox = makeImageBoxFromCanvasPoints(startPoint, currentPoint);
+
+    const width = newBox[2] - newBox[0];
+    const height = newBox[3] - newBox[1];
+
+    // 太小的框不要保存，防止误点
+    if (width >= 3 && height >= 3) {
+        boxes.push(newBox);
+        selectedBoxIndex = boxes.length - 1;
+    }
+
+    startPoint = null;
+    currentPoint = null;
+
+    renderBoxList();
+    redrawCanvas();
+});
+
+
+canvas.addEventListener("mouseleave", () => {
+    if (isDrawing) {
+        isDrawing = false;
+        startPoint = null;
+        currentPoint = null;
+        redrawCanvas();
+    }
+});
+
+
+deleteBoxBtn.addEventListener("click", () => {
+    if (selectedBoxIndex < 0 || selectedBoxIndex >= boxes.length) {
+        statusTextEl.textContent = "状态：请先选中一个框";
+        return;
+    }
+
+    boxes.splice(selectedBoxIndex, 1);
+    selectedBoxIndex = -1;
+
+    renderBoxList();
+    redrawCanvas();
+
+    statusTextEl.textContent = "状态：已删除选中框";
+});
+
+
+clearBoxesBtn.addEventListener("click", () => {
+    boxes = [];
+    selectedBoxIndex = -1;
+
+    renderBoxList();
+    redrawCanvas();
+
+    statusTextEl.textContent = "状态：已清空所有框";
+});
 
 
 refreshBtn.addEventListener("click", loadImageList);
 
 
-// 页面打开后自动加载图片列表
+window.addEventListener("resize", () => {
+    resizeCanvasToDisplaySize();
+    redrawCanvas();
+});
+
+
+// 页面打开后初始化
+resizeCanvasToDisplaySize();
+redrawCanvas();
 loadImageList();

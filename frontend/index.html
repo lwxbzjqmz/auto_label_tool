@@ -10,6 +10,8 @@
         <header class="top-bar">
             <h1>自动标注工具</h1>
             <button id="refreshBtn">刷新图片列表</button>
+            <button id="deleteBoxBtn">删除选中框</button>
+            <button id="clearBoxesBtn">清空所有框</button>
         </header>
 
         <main class="main-layout">
@@ -20,9 +22,9 @@
             </aside>
 
             <section class="center-panel">
-                <h2>图片预览</h2>
-                <div class="preview-box">
-                    <img id="previewImage" alt="请选择一张图片">
+                <h2>图片标注区</h2>
+                <div class="canvas-box">
+                    <canvas id="imageCanvas"></canvas>
                 </div>
             </section>
 
@@ -30,6 +32,10 @@
                 <h2>当前信息</h2>
                 <p id="currentImageName">当前图片：无</p>
                 <p id="statusText">状态：等待加载图片</p>
+
+                <h2>坐标列表</h2>
+                <div id="boxCount">框数量：0</div>
+                <ul id="boxList"></ul>
             </aside>
         </main>
     </div>
