@@ -9,6 +9,7 @@ const ctx = canvas.getContext("2d");
 
 const boxListEl = document.getElementById("boxList");
 const boxCountEl = document.getElementById("boxCount");
+const saveXmlBtn = document.getElementById("saveXmlBtn")
 const deleteBoxBtn = document.getElementById("deleteBoxBtn");
 const clearBoxesBtn = document.getElementById("clearBoxesBtn");
 
@@ -334,6 +335,42 @@ function renderBoxList() {
     }
 }
 
+async function saveXml() {
+    if (!currentImageName) {
+        statusTextEl.textContent = "状态：请先选择一张图片";
+        return;
+    }
+
+    const payload = {
+        image_name: currentImageName,
+        boxes: boxes
+    };
+
+    statusTextEl.textContent = "状态：正在保存 XML...";
+
+    try {
+        const response = await fetch("/api/save", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            statusTextEl.textContent = `状态：保存失败，${data.message}`;
+            return;
+        }
+
+        const result = data.result;
+        statusTextEl.textContent = `状态：保存成功，${result.xml_name}，框数量 ${result.box_count}`;
+    } catch (error) {
+        console.error(error);
+        statusTextEl.textContent = "状态：保存失败，无法连接后端";
+    }
+}
 
 canvas.addEventListener("mousedown", (event) => {
     if (!currentImage) {
@@ -455,7 +492,7 @@ clearBoxesBtn.addEventListener("click", () => {
 
 
 refreshBtn.addEventListener("click", loadImageList);
-
+saveXmlBtn.addEventListener("click", saveXml);
 
 window.addEventListener("resize", () => {
     resizeCanvasToDisplaySize();
