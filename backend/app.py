@@ -3,6 +3,8 @@ from flask import Flask,jsonify,send_from_directory,abort,request
 from config import FRONTEND_DIR,IMAGE_DIR,ANNOTATION_DIR
 from image_manager import list_images
 from xml_writer import write_voc_xml
+from xml_reader import read_voc_xml
+from detector import get_boxes
 
 app=Flask(__name__)
 
@@ -85,6 +87,77 @@ def api_save():
         "message":"XML saved successfully",
         "result":result
         })
+
+@app.route("/api/annotation/<path:image_name>")
+def api_annontation(image_name):
+    '''读voc xml,返回boxes'''
+    try:
+        result=read_voc_xml(image_name)
+    except ValueError as e:
+        return jsonify({
+            "success":False,
+            "message":str(e)
+        }),500
+    except Exception as e:
+        return jsonify({
+            "success":False,
+            "message":f"Failed to read XML:{e}"
+        }),500
+    
+    return jsonify({
+        "success":True,
+        "result":result
+    })
+
+@app.route("/api/detect",methods=["POST"])
+def api_detect():
+    '''自动标注接口'''
+    data=request.get_json(silent=True)
+
+    if not data:
+        return jsonify({
+            "success":False,
+            "message":"No JOSN data received"
+        }),400
+    
+    image_name=data.get("image_name")
+
+    if not image_name:
+        return jsonify({
+            "success":False,
+            "message":"Missing image_name"
+        }),400
+    
+    image_path=(IMAGE_DIR/image_name).resolve()
+
+    try:
+        image_path.relative_to(IMAGE_DIR.resolve())
+    except ValueError:
+        return jsonify({
+            "success":False,
+            "message":"Invalid image path"
+        }),400
+    
+    if not image_path.exists() or not image_path.is_file():
+        return jsonify({
+            "success":False,
+            "message":f"Image not found:{image_name}"
+        }),404
+    
+    try:
+        boxes=get_boxes(image_path)
+    except Exception as e:
+        return jsonify({
+            "success":False,
+            "message":f"Detect failed:{e}"
+        }),500
+    
+    return jsonify({
+        "success":True,
+        "message":"Detect success",
+        "boxes":boxes,
+        "box_count":len(boxes)
+    })
 
 @app.route("/api/health")
 def api_health():

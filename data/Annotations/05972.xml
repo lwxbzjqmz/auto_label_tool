@@ -1,0 +1,25 @@
+<annotation>
+    <folder>detect.class</folder>
+    <path>05972.jpg</path>
+    <path>W:\openmv-ide\object_file\auto_label_tool\data\JPEGImages\05972.jpg</path>
+    <source/>
+    <database>Unknown</database>
+    <size>
+        <width>480</width>
+        <height>640</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>object</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>168</xmin>
+            <ymin>201</ymin>
+            <xmax>258</xmax>
+            <ymax>300</ymax>
+        </bndbox>
+    </object>
+</annotation>

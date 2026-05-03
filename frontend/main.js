@@ -3,6 +3,7 @@ const imageCountEl = document.getElementById("imageCount");
 const currentImageNameEl = document.getElementById("currentImageName");
 const statusTextEl = document.getElementById("statusText");
 const refreshBtn = document.getElementById("refreshBtn");
+const autoDetectBtn = document.getElementById("autoDetectBtn")
 
 const canvas = document.getElementById("imageCanvas");
 const ctx = canvas.getContext("2d");
@@ -90,13 +91,15 @@ function selectImage(imageName, liElement) {
 
     currentImage = new Image();
 
-    currentImage.onload = () => {
+    currentImage.onload = async () => {
         resizeCanvasToDisplaySize();
         redrawCanvas();
         renderBoxList();
 
         currentImageNameEl.textContent = `当前图片：${imageName}`;
         statusTextEl.textContent = `状态：图片已加载，原图尺寸 ${currentImage.naturalWidth} × ${currentImage.naturalHeight}`;
+
+        await loadAnnotation(imageName);
     };
 
     currentImage.onerror = () => {
@@ -372,6 +375,80 @@ async function saveXml() {
     }
 }
 
+async function loadAnnotation(imageName) {
+    try {
+        const response = await fetch(`/api/annotation/${encodeURIComponent(imageName)}`);
+        const data = await response.json();
+
+        if (!data.success) {
+            statusTextEl.textContent = `状态：读取 XML 失败，${data.message}`;
+            return;
+        }
+
+        const result = data.result;
+
+        boxes = result.boxes || [];
+        selectedBoxIndex = -1;
+
+        renderBoxList();
+        redrawCanvas();
+
+        if (result.exists) {
+            statusTextEl.textContent = `状态：已读取 ${result.xml_name}，框数量 ${boxes.length}`;
+        } else {
+            statusTextEl.textContent = "状态：当前图片暂无 XML，可新建标注";
+        }
+    } catch (error) {
+        console.error("读取 XML 失败：", error);
+        statusTextEl.textContent = "状态：读取 XML 失败，无法连接后端";
+    }
+}
+
+async function autoDetect() {
+    if (!currentImageName) {
+        statusTextEl.textContent = "状态：请先选择一张图片";
+        return;
+    }
+
+    const payload = {
+        image_name: currentImageName
+    };
+
+    statusTextEl.textContent = "状态：正在自动标注...";
+
+    try {
+        const response = await fetch("/api/detect", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        console.log("自动标注返回：", data);
+
+        if (!data.success) {
+            statusTextEl.textContent = `状态：自动标注失败，${data.message}`;
+            return;
+        }
+
+        // 当前策略：自动标注结果直接替换当前 boxes
+        // 后面如果你想“追加到已有框”，这里可以改成 boxes = boxes.concat(data.boxes)
+        boxes = data.boxes || [];
+        selectedBoxIndex = -1;
+
+        renderBoxList();
+        redrawCanvas();
+
+        statusTextEl.textContent = `状态：自动标注完成，框数量 ${boxes.length}`;
+    } catch (error) {
+        console.error("自动标注请求失败：", error);
+        statusTextEl.textContent = "状态：自动标注失败，无法连接后端";
+    }
+}
+
 canvas.addEventListener("mousedown", (event) => {
     if (!currentImage) {
         return;
@@ -490,7 +567,7 @@ clearBoxesBtn.addEventListener("click", () => {
     statusTextEl.textContent = "状态：已清空所有框";
 });
 
-
+autoDetectBtn.addEventListener("click", autoDetect);
 refreshBtn.addEventListener("click", loadImageList);
 saveXmlBtn.addEventListener("click", saveXml);
 
