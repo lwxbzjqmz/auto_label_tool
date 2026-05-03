@@ -4,22 +4,40 @@ from config import MODEL_SELECT,YOLOV3_MBV2_PC_MODEL_PATH
 import math
 import numpy as np
 import tensorflow as tf
-from config import(
+from config import (
     MODEL_SELECT,
     YOLOV3_MBV2_PC_MODEL_PATH,
     YOLOV3_MBV2_ANCHORS_PATH,
+
+    YOLOV3_MBV2_SCORE_THRESHOLD,
+    YOLOV3_MBV2_NMS_IOU_THRESHOLD,
+
+    YOLOV3_MBV2_CROP_X,
+    YOLOV3_MBV2_CROP_Y,
+    YOLOV3_MBV2_CROP_W,
+    YOLOV3_MBV2_CROP_H,
+
+    YOLOV3_MBV2_MODEL_INPUT_W,
+    YOLOV3_MBV2_MODEL_INPUT_H,
+
+    YOLOV3_MBV2_ORIGINAL_IMAGE_W,
+    YOLOV3_MBV2_ORIGINAL_IMAGE_H,
 )
 
-CROP_X=40
-CROP_Y=0
-CROP_W=240
-CROP_H=240
+CROP_X=YOLOV3_MBV2_CROP_X
+CROP_Y=YOLOV3_MBV2_CROP_Y
+CROP_W=YOLOV3_MBV2_CROP_W
+CROP_H=YOLOV3_MBV2_CROP_H
 
-MODEL_INPUT_W=144
-MODEL_INPUT_H=144
+MODEL_INPUT_W=YOLOV3_MBV2_MODEL_INPUT_W
+MODEL_INPUT_H=YOLOV3_MBV2_MODEL_INPUT_H
 
-SCORE_THRESHOLD=0.6 #置信度阈值
-NMS_IOU_THRESHOLD=0.3#NMS阈值
+ORIGINAL_IMAGE_W=YOLOV3_MBV2_ORIGINAL_IMAGE_W
+ORIGINAL_IMAGE_H=YOLOV3_MBV2_ORIGINAL_IMAGE_H
+
+
+SCORE_THRESHOLD=YOLOV3_MBV2_SCORE_THRESHOLD #置信度阈值
+NMS_IOU_THRESHOLD=YOLOV3_MBV2_NMS_IOU_THRESHOLD#NMS阈值
 
 _interpreter=None
 _input_details=None
@@ -93,15 +111,15 @@ def get_boxes_by_yolov3_mbv2(image_path):
         xmax_crop=int(round(xmax*scale_x))
         ymax_crop=int(round(ymax*scale_y))
 
-        xmin_full=xmin_crop+CROP_X # 再映射回原始320x240图像坐标
+        xmin_full=xmin_crop+CROP_X # 再映射回原始320xORIGINAL_IMAGE_H图像坐标
         ymin_full=ymin_crop+CROP_Y
         xmax_full=xmax_crop+CROP_X
         ymax_full=ymax_crop+CROP_Y
 
-        xmin_full=_clamp(xmin_full,0,320)#限制到原图的范围内
-        xmax_full=_clamp(xmax_full,0,320)
-        ymin_full=_clamp(ymin_full,0,240)
-        ymax_full=_clamp(ymax_full,0,240)
+        xmin_full=_clamp(xmin_full,0,ORIGINAL_IMAGE_W)#限制到原图的范围内
+        xmax_full=_clamp(xmax_full,0,ORIGINAL_IMAGE_W)
+        ymin_full=_clamp(ymin_full,0,ORIGINAL_IMAGE_H)
+        ymax_full=_clamp(ymax_full,0,ORIGINAL_IMAGE_H)
     
         if xmax_full-xmin_full>=1 and ymax_full-ymin_full>=1:
             boxes.append([xmin_full, ymin_full, xmax_full, ymax_full])
