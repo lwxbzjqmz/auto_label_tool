@@ -1,0 +1,22 @@
+#Python
+__pycache__/
+*.pyc 
+*.pyo 
+*.pyd
+
+#VS Code 
+.vscode/
+
+# Logs
+*.log
+
+# Dataset images
+data/
+
+#Model files
+models/
+
+#Temporary files
+runs/
+tmp/
+temp/

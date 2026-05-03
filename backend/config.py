@@ -16,3 +16,18 @@ CLASS_NAME="object"#XML中的类别名
 
 VOC_FOLDER_NAME="detect.class"#XML中，数据集的类别名
 
+MODEL_DIR=BASE_DIR/"models"#模型根目录
+
+MODEL_SELECT=1#模型选择flag，0是large_model路径
+
+YOLOV3_MBV2_PC_MODEL_PATH=(MODEL_DIR
+                           /"yolov3_mbv2"
+                           /str(MODEL_SELECT)
+                           /"yolo3_iou_smartcar_final.tflite")
+#模型有两个，一个用于PC端，一个部署于openmv
+
+YOLOV3_MBV2_ANCHORS_PATH=(MODEL_DIR
+                           /"yolov3_mbv2"
+                           /str(MODEL_SELECT)
+                           /"yolo3_anchors.txt")
+
