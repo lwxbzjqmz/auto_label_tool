@@ -18,7 +18,7 @@ VOC_FOLDER_NAME="detect.class"#XML中，数据集的类别名
 
 MODEL_DIR=BASE_DIR/"models"#模型根目录
 
-MODEL_SELECT=1#模型选择flag，0是large_model路径
+MODEL_SELECT=0#模型选择flag，0是large_model路径
 
 YOLOV3_MBV2_PC_MODEL_PATH=(MODEL_DIR
                            /"yolov3_mbv2"
@@ -45,3 +45,8 @@ YOLOV3_MBV2_MODEL_INPUT_H=144
 
 YOLOV3_MBV2_ORIGINAL_IMAGE_W=320
 YOLOV3_MBV2_ORIGINAL_IMAGE_H=240
+
+#========large_model的配置===========
+LARGE_MODEL_DIR=MODEL_DIR/"large_model"
+LARGE_MODEL_RESPONSES_DIR=LARGE_MODEL_DIR/"responses"
+LARGE_MODEL_DEFAULT_RESPONSE_PATH=LARGE_MODEL_RESPONSES_DIR/"large_model_result.json"
