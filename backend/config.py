@@ -18,7 +18,7 @@ VOC_FOLDER_NAME="detect.class"#XML中，数据集的类别名
 
 MODEL_DIR=BASE_DIR/"models"#模型根目录
 
-MODEL_SELECT=0#模型选择flag，0是large_model路径
+MODEL_SELECT=0#模型选择flag，0是路径
 
 YOLOV3_MBV2_PC_MODEL_PATH=(MODEL_DIR
                            /"yolov3_mbv2"
@@ -78,6 +78,6 @@ GROUNDING_DINO_AUTO_START=True
 
 GROUNDING_DINO_PYTHON_PATH=r"W:\anaconda3\envs\grounding_dino\python.exe"
 
-GROUNDING_DINO_WORKER_SCRIPT=BASE_DIR/"backend"/"large_model"/"grounding_dino/worker.py"
+GROUNDING_DINO_WORKER_SCRIPT=BASE_DIR/"backend"/"grounding_dino/worker.py"
 
 GROUNDING_DINO_STARTUP_TIMEOUT=120

@@ -17,7 +17,7 @@ def get_boxes_by_grounding_dino_worker(image_path):
 
     payload={
         "image_name":image_path.name,
-        "promt":GROUNDING_DINO_DEFAULT_PROMPT,
+        "prompt":GROUNDING_DINO_DEFAULT_PROMPT,
         "box_threshold":GROUNDING_DINO_BOX_THRESHOLD,
         "text_threshold":GROUNDING_DINO_TEXT_THRESHOLD,
     }

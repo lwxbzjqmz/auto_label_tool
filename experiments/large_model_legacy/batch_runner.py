@@ -42,7 +42,7 @@ def run_large_model_json_to_xml(json_path=None):
         saved_images+=1
         total_boxes+=result["box_count"]
 
-        print(f"[保存]{result['xml_name']} 框数量")
+        print(f"[保存]{result['xml_name']} 框数量:{result['box_count']}")
 
     print("="*60)
     print("large_model JSON 导入完成")

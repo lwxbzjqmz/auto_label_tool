@@ -1,6 +1,6 @@
 from config import MODEL_SELECT
 from yolov3_mbv2.detector import get_boxes_by_yolov3_mbv2
-from large_model.detector import get_boxes_by_large_model
+from grounding_dino.detector import get_boxes_by_large_model
 
 def get_boxes(image_path):
     '''自动模型选择'''
