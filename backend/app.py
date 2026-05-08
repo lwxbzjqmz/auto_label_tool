@@ -5,6 +5,7 @@ from image_manager import list_images
 from xml_writer import write_voc_xml
 from xml_reader import read_voc_xml
 from detector import get_boxes
+from grounding_dino_manager import start_grounding_dino_worker,stop_grounding_dino_worker
 
 app=Flask(__name__)
 
@@ -171,4 +172,10 @@ if __name__=="__main__":
     IMAGE_DIR.mkdir(parents=True,exist_ok=True)
     ANNOTATION_DIR.mkdir(parents=True,exist_ok=True)
 
-    app.run(host="127.0.0.1",port=5000,debug=True)
+    start_grounding_dino_worker()
+
+    try:
+        app.run(host="127.0.0.1",port=5000,debug=True,use_reloader=False)
+    finally:
+        stop_grounding_dino_worker()
+
