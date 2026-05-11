@@ -5,8 +5,6 @@ from urllib.request import urlopen
 from urllib.error import URLError
 
 from config import(
-    MODEL_SELECT,
-
     GROUNDING_DINO_AUTO_START,
     GROUNDING_DINO_PYTHON_PATH,
     GROUNDING_DINO_WORKER_SCRIPT,
@@ -24,11 +22,7 @@ def start_grounding_dino_worker():
     if not GROUNDING_DINO_AUTO_START:
         print("Grounding DINO worker自动启动已关闭")
         return
-    
-    if MODEL_SELECT!=0:
-        print("MODEL_SELECT不是0,不启动Grounding DINO worker")
-        return
-    
+       
     if _is_worker_alive():
         print("Grounding DINO worker已经在运行")
         return

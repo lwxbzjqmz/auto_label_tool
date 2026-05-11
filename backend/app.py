@@ -1,11 +1,14 @@
 from pathlib import Path
-from flask import Flask,jsonify,send_from_directory,abort,request
-from config import FRONTEND_DIR,IMAGE_DIR,ANNOTATION_DIR
+from flask import Flask,jsonify,send_from_directory,abort,request,send_file
+from config import FRONTEND_DIR,IMAGE_DIR,ANNOTATION_DIR,MODEL_SELECT,DEFAULT_DETECTOR
 from image_manager import list_images
 from xml_writer import write_voc_xml
 from xml_reader import read_voc_xml
 from detector import get_boxes
 from grounding_dino_manager import start_grounding_dino_worker,stop_grounding_dino_worker
+from yolov3_mbv2.model_paths import list_yolov3_mbv2_models
+from backup_manager import make_annotations_backup
+from reject_manager import reject_image
 
 app=Flask(__name__)
 
@@ -89,6 +92,49 @@ def api_save():
         "result":result
         })
 
+@app.route("/api/reject_image",methods=["POST"])
+def api_reject_image():
+    '''把不合格图片和对应XML移入废弃区'''
+    data=request.get_json(silent=True)
+
+    if not data:
+        return jsonify({
+            "success":False,
+            "message":"No JSON data received"
+        }),400
+    
+    image_name=data.get("image_name")
+
+    if not image_name:
+        return jsonify({
+            "success":False,
+            "message":"Missing image_name"
+        }),400
+    
+    try:
+        result=reject_image(image_name)
+    except ValueError as e:
+        return jsonify({
+            "success":False,
+            "message":str(e)
+        }),400
+    except FileNotFoundError as e:
+        return jsonify({
+            "success":False,
+            "message":str(e)
+        }),404
+    except Exception as e:
+        return jsonify({
+            "success":False,
+            "message":f"Reject image failed:{e}"
+        }),500
+    
+    return jsonify({
+        "success":True,
+        "message":"Image moved to rejected folder",
+        "result":result
+    })
+
 @app.route("/api/annotation/<path:image_name>")
 def api_annontation(image_name):
     '''读voc xml,返回boxes'''
@@ -122,6 +168,16 @@ def api_detect():
         }),400
     
     image_name=data.get("image_name")
+    detector=data.get("detector",DEFAULT_DETECTOR)
+    model_select=data.get("model_select",None)
+
+    grounding_dino_options={
+        "prompt":data.get("prompt"),
+        "box_threshold":data.get("box_threshold"),
+        "text_threshold":data.get("text_threshold"),
+        "use_nms":data.get("use_nms"),
+        "nms_iou_threshold":data.get("nms_iou_threshold"),
+    }
 
     if not image_name:
         return jsonify({
@@ -146,7 +202,11 @@ def api_detect():
         }),404
     
     try:
-        boxes=get_boxes(image_path)
+        boxes=get_boxes(image_path,
+                        detector=detector,
+                        model_select=model_select,
+                        grounding_dino_options=grounding_dino_options
+                        )
     except Exception as e:
         return jsonify({
             "success":False,
@@ -159,6 +219,58 @@ def api_detect():
         "boxes":boxes,
         "box_count":len(boxes)
     })
+
+@app.route("/api/yolo_models")
+def api_yolo_models():
+    '''返回YOLO模型列表'''
+    models=list_yolov3_mbv2_models()
+
+    return jsonify({
+        "success":True,
+        "models":models,
+        "default_model":MODEL_SELECT
+    })
+
+@app.route("/api/detectors")
+def api_detectors():
+    '''返回检测器信息'''
+    return jsonify({
+        "success":True,
+        "default_detector":DEFAULT_DETECTOR,
+        "detectors":[
+            {
+                "id":"yolo",
+                "name":"YOLOv3-mbv2"
+            },
+            {
+                "id":"grounding_dino",
+                "name":"Grounding DINO"
+            }
+        ]
+    })
+
+@app.route("/api/backup_annotations")
+def api_backup_annotations():
+    '''备份Annotations目录'''
+    try:
+        result=make_annotations_backup()
+    except FileNotFoundError as e:
+        return jsonify({
+            "success":False,
+            "message":str(e)
+        }),404
+    except Exception as e:
+        return jsonify({
+            "success":False,
+            "message":f"Backup failed:{e}"
+        }),500
+    
+    return send_file(
+        result["zip_path"],
+        as_attachment=True,
+        download_name=result["zip_name"],
+        mimetype="application/zip"
+    )
 
 @app.route("/api/health")
 def api_health():

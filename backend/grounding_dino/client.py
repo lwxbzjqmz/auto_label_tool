@@ -8,10 +8,12 @@ from config import(
     GROUNDING_DINO_DEFAULT_PROMPT,
     GROUNDING_DINO_BOX_THRESHOLD,
     GROUNDING_DINO_TEXT_THRESHOLD,
+    GROUNDING_DINO_USE_NMS,
+    GROUNDING_DINO_NMS_IOU_THRESHOLD,
     GROUNDING_DINO_REQUEST_TIMEOUT,
 )
 
-def get_boxes_by_grounding_dino_worker(image_path):
+def get_boxes_by_grounding_dino_worker(image_path,options=None):
     '''请求Grounding DINO worker,返回boxes'''
     image_path=Path(image_path)
 
@@ -20,7 +22,14 @@ def get_boxes_by_grounding_dino_worker(image_path):
         "prompt":GROUNDING_DINO_DEFAULT_PROMPT,
         "box_threshold":GROUNDING_DINO_BOX_THRESHOLD,
         "text_threshold":GROUNDING_DINO_TEXT_THRESHOLD,
+        "use_nms":GROUNDING_DINO_USE_NMS,
+        "nms_iou_threshold":GROUNDING_DINO_NMS_IOU_THRESHOLD,
     }
+
+    if options:
+        for key,value in options.items():
+            if value is not None:
+                payload[key]=value
 
     data=json.dumps(payload,ensure_ascii=False).encode("utf-8")
 

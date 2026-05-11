@@ -10,6 +10,12 @@ IMAGE_DIR=DATA_DIR/"JPEGImages"#图片目录
 
 ANNOTATION_DIR=DATA_DIR/"Annotations"#XML标注目录
 
+REJECTED_DATA_DIR=DATA_DIR/"Rejected"
+
+REJECTED_IMAGE_DIR=REJECTED_DATA_DIR/"JPEGImages"
+
+REJECTED_ANNOTATION_DIR=REJECTED_DATA_DIR/"Annotations"
+
 IMAGE_EXTENSIONS={".jpg"}#图片后缀
 
 CLASS_NAME="object"#XML中的类别名
@@ -18,18 +24,24 @@ VOC_FOLDER_NAME="detect.class"#XML中，数据集的类别名
 
 MODEL_DIR=BASE_DIR/"models"#模型根目录
 
-MODEL_SELECT=0#模型选择flag，0是路径
+MODEL_SELECT=1#模型选择flag，从1开始
 
-YOLOV3_MBV2_PC_MODEL_PATH=(MODEL_DIR
-                           /"yolov3_mbv2"
+DEFAULT_DETECTOR="yolo"
+
+YOLOV3_MBV2_MODEL_ROOT=MODEL_DIR/"yolov3_mbv2"
+
+YOLOV3_MBV2_MODEL_FILENAME="yolo3_iou_smartcar_final.tflite"
+
+YOLOV3_MBV2_ANCHORS_FILENAME="yolo3_anchors.txt"
+
+YOLOV3_MBV2_PC_MODEL_PATH=(YOLOV3_MBV2_MODEL_ROOT
                            /str(MODEL_SELECT)
-                           /"yolo3_iou_smartcar_final.tflite")
+                           /YOLOV3_MBV2_MODEL_FILENAME)
 #模型有两个，一个用于PC端，一个部署于openmv
 
-YOLOV3_MBV2_ANCHORS_PATH=(MODEL_DIR
-                           /"yolov3_mbv2"
+YOLOV3_MBV2_ANCHORS_PATH=(YOLOV3_MBV2_MODEL_ROOT
                            /str(MODEL_SELECT)
-                           /"yolo3_anchors.txt")
+                           /YOLOV3_MBV2_ANCHORS_FILENAME)
 
 #========YOLOv3-mbv2的配置===========
 YOLOV3_MBV2_SCORE_THRESHOLD=0.6
@@ -67,11 +79,15 @@ GROUNDING_DINO_LOCAL_FILES_ONLY=True
 
 GROUNDING_DINO_DEFAULT_PROMPT="tennis ball. blue bean bag. red bean bag. white teddy bear. brown teddy bear"
 
-GROUNDING_DINO_BOX_THRESHOLD=0.25
+GROUNDING_DINO_BOX_THRESHOLD=0.18
 
 GROUNDING_DINO_TEXT_THRESHOLD=0.20
 
 GROUNDING_DINO_REQUEST_TIMEOUT=60
+
+GROUNDING_DINO_USE_NMS=True
+
+GROUNDING_DINO_NMS_IOU_THRESHOLD=0.20
 
 #=====Grounding DINO worker进程配置========
 GROUNDING_DINO_AUTO_START=True

@@ -1,18 +1,61 @@
+const groundingPromptInput = document.getElementById("groundingPromptInput");
+const groundingBoxThresholdInput = document.getElementById("groundingBoxThresholdInput");
+const groundingTextThresholdInput = document.getElementById("groundingTextThresholdInput");
+const groundingUseNmsInput = document.getElementById("groundingUseNmsInput");
+const groundingNmsIouInput = document.getElementById("groundingNmsIouInput");
+
 const imageListEl = document.getElementById("imageList");
 const imageCountEl = document.getElementById("imageCount");
 const currentImageNameEl = document.getElementById("currentImageName");
 const statusTextEl = document.getElementById("statusText");
 const refreshBtn = document.getElementById("refreshBtn");
-const autoDetectBtn = document.getElementById("autoDetectBtn")
+
+const yoloDetectBtn = document.getElementById("yoloDetectBtn");
+const groundingDinoDetectBtn = document.getElementById("groundingDinoDetectBtn");
+const yoloModelSelectEl = document.getElementById("yoloModelSelect");
+const imageSearchInput = document.getElementById("imageSearchInput");
+const rejectImageBtn = document.getElementById("rejectImageBtn");
 
 const canvas = document.getElementById("imageCanvas");
+canvas.tabIndex = 0;
 const ctx = canvas.getContext("2d");
 
 const boxListEl = document.getElementById("boxList");
 const boxCountEl = document.getElementById("boxCount");
-const saveXmlBtn = document.getElementById("saveXmlBtn")
+const saveXmlBtn = document.getElementById("saveXmlBtn");
 const deleteBoxBtn = document.getElementById("deleteBoxBtn");
 const clearBoxesBtn = document.getElementById("clearBoxesBtn");
+const backupAnnotationsBtn = document.getElementById("backupAnnotationsBtn");
+
+const openPreviewWallBtn = document.getElementById("openPreviewWallBtn");
+const backToLabelViewBtn = document.getElementById("backToLabelViewBtn");
+
+const previewWallView = document.getElementById("previewWallView");
+const previewWallGrid = document.getElementById("previewWallGrid");
+const previewWallSearchInput = document.getElementById("previewWallSearchInput");
+const previewWallRefreshBtn = document.getElementById("previewWallRefreshBtn");
+const previewWallPrevPageBtn = document.getElementById("previewWallPrevPageBtn");
+const previewWallNextPageBtn = document.getElementById("previewWallNextPageBtn");
+const previewWallPageInfo = document.getElementById("previewWallPageInfo");
+
+const shortcutPreviousImageInput = document.getElementById("shortcutPreviousImageInput");
+const shortcutNextImageInput = document.getElementById("shortcutNextImageInput");
+const shortcutSaveXmlInput = document.getElementById("shortcutSaveXmlInput");
+const shortcutSavePreviousImageInput = document.getElementById("shortcutSavePreviousImageInput");
+const shortcutSaveNextImageInput = document.getElementById("shortcutSaveNextImageInput");
+const shortcutYoloDetectInput = document.getElementById("shortcutYoloDetectInput");
+const shortcutGroundingDinoDetectInput = document.getElementById("shortcutGroundingDinoDetectInput");
+const shortcutDeleteBoxInput = document.getElementById("shortcutDeleteBoxInput");
+const shortcutClearBoxesInput = document.getElementById("shortcutClearBoxesInput");
+const shortcutReloadAnnotationInput = document.getElementById("shortcutReloadAnnotationInput");
+const shortcutCancelSelectInput = document.getElementById("shortcutCancelSelectInput");
+
+const saveShortcutConfigBtn = document.getElementById("saveShortcutConfigBtn");
+const resetShortcutConfigBtn = document.getElementById("resetShortcutConfigBtn");
+const shortcutRejectImageInput = document.getElementById("shortcutRejectImageInput");
+
+let allImages = [];
+let filteredImages = [];
 
 let currentImageName = null;
 let currentImage = null;
@@ -24,7 +67,9 @@ let isDrawing = false;
 let startPoint = null;
 let currentPoint = null;
 
-// 图片在 canvas 中的显示信息
+let previewWallPage = 1;
+const previewWallPageSize = 40;
+
 let imageView = {
     offsetX: 0,
     offsetY: 0,
@@ -32,6 +77,378 @@ let imageView = {
     drawHeight: 0,
     scale: 1
 };
+
+const groundingDinoDefaultConfig = {
+    boxThreshold: 0.18,
+    textThreshold: 0.20,
+    useNms: true,
+    nmsIouThreshold: 0.20
+};
+
+const defaultShortcutConfig = {
+    previousImage: "a",
+    nextImage: "d",
+    saveXml: "s",
+    savePreviousImage: "q",
+    saveNextImage: "e",
+    yoloDetect: "y",
+    groundingDinoDetect: "g",
+    deleteBox: "delete",
+    clearBoxes: "c",
+    reloadAnnotation: "r",
+    rejectImage:"x",
+    cancelSelect: "0",
+    selectBoxKeys: ["1","2","3","4","5","6","7","8","9"]
+};
+
+let shortcutConfig = loadShortcutConfig();
+
+
+function initGroundingDinoInputs() {
+    if (!groundingBoxThresholdInput) {
+        return;
+    }
+
+    groundingBoxThresholdInput.value = String(groundingDinoDefaultConfig.boxThreshold);
+    groundingTextThresholdInput.value = String(groundingDinoDefaultConfig.textThreshold);
+    groundingUseNmsInput.checked = groundingDinoDefaultConfig.useNms;
+    groundingNmsIouInput.value = String(groundingDinoDefaultConfig.nmsIouThreshold);
+}
+
+
+function loadShortcutConfig() {
+    const text = localStorage.getItem("shortcutConfig");
+
+    if (!text) {
+        return {
+            ...defaultShortcutConfig
+        };
+    }
+
+    try {
+        const userConfig = JSON.parse(text);
+
+        return {
+            ...defaultShortcutConfig,
+            ...userConfig,
+            selectBoxKeys: defaultShortcutConfig.selectBoxKeys
+        };
+    } catch (error) {
+        console.error("快捷键配置读取失败：", error);
+
+        return {
+            ...defaultShortcutConfig
+        };
+    }
+}
+
+
+function saveShortcutConfig(config) {
+    localStorage.setItem("shortcutConfig", JSON.stringify(config));
+}
+
+
+function normalizeShortcutKey(key) {
+    const rawValue = String(key);
+
+    if (rawValue === " ") {
+        return "space";
+    }
+
+    let value = rawValue.trim().toLowerCase();
+
+    if (value === "spacebar") {
+        return "space";
+    }
+
+    if (value === "space") {
+        return "space";
+    }
+
+    if (value === "del") {
+        return "delete";
+    }
+
+    if (value === "esc") {
+        return "escape";
+    }
+
+    if (value.startsWith("key") && value.length === 4) {
+        return value.slice(3);
+    }
+
+    if (value.startsWith("digit") && value.length === 6) {
+        return value.slice(5);
+    }
+
+    return value;
+}
+
+
+function shortcutMatches(shortcut, key) {
+    if (Array.isArray(shortcut)) {
+        return shortcut.some(item => normalizeShortcutKey(item) === key);
+    }
+
+    return normalizeShortcutKey(shortcut) === key;
+}
+
+
+function eventMatchesShortcut(event, shortcut) {
+    const key = normalizeShortcutKey(event.key);
+    const code = normalizeShortcutKey(event.code);
+
+    return shortcutMatches(shortcut, key) || shortcutMatches(shortcut, code);
+}
+
+
+function getNumberInputValue(inputEl, defaultValue) {
+    const text = String(inputEl.value).trim();
+
+    if (text === "") {
+        return defaultValue;
+    }
+
+    const value = Number(text);
+
+    if (!Number.isFinite(value)) {
+        return defaultValue;
+    }
+
+    return value;
+}
+
+
+function getShortcutInputBindings() {
+    return [
+        {
+            key: "previousImage",
+            input: shortcutPreviousImageInput,
+            defaultValue: defaultShortcutConfig.previousImage
+        },
+        {
+            key: "nextImage",
+            input: shortcutNextImageInput,
+            defaultValue: defaultShortcutConfig.nextImage
+        },
+        {
+            key: "saveXml",
+            input: shortcutSaveXmlInput,
+            defaultValue: defaultShortcutConfig.saveXml
+        },
+        {
+            key: "savePreviousImage",
+            input: shortcutSavePreviousImageInput,
+            defaultValue: defaultShortcutConfig.savePreviousImage
+        },
+        {
+            key: "saveNextImage",
+            input: shortcutSaveNextImageInput,
+            defaultValue: defaultShortcutConfig.saveNextImage
+        },
+        {
+            key: "yoloDetect",
+            input: shortcutYoloDetectInput,
+            defaultValue: defaultShortcutConfig.yoloDetect
+        },
+        {
+            key: "groundingDinoDetect",
+            input: shortcutGroundingDinoDetectInput,
+            defaultValue: defaultShortcutConfig.groundingDinoDetect
+        },
+        {
+            key: "deleteBox",
+            input: shortcutDeleteBoxInput,
+            defaultValue: defaultShortcutConfig.deleteBox
+        },
+        {
+            key: "clearBoxes",
+            input: shortcutClearBoxesInput,
+            defaultValue: defaultShortcutConfig.clearBoxes
+        },
+        {
+            key: "reloadAnnotation",
+            input: shortcutReloadAnnotationInput,
+            defaultValue: defaultShortcutConfig.reloadAnnotation
+        },
+        {
+            key: "cancelSelect",
+            input: shortcutCancelSelectInput,
+            defaultValue: defaultShortcutConfig.cancelSelect
+        },
+        {
+            key: "rejectImage",
+            input: shortcutRejectImageInput,
+            defaultValue: defaultShortcutConfig.rejectImage
+        },
+    ].filter(item => item.input);
+}
+
+
+function fillShortcutConfigInputs() {
+    const bindings = getShortcutInputBindings();
+
+    for (const item of bindings) {
+        item.input.value = shortcutConfig[item.key];
+    }
+}
+
+
+function bindShortcutInputCapture() {
+    const bindings = getShortcutInputBindings();
+
+    for (const item of bindings) {
+        item.input.addEventListener("keydown", (event) => {
+            if (event.key === "Tab") {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const key = normalizeShortcutKey(event.key);
+
+            item.input.value = key;
+            statusTextEl.textContent = `状态：已设置 ${item.key} 快捷键为 ${key}，点击“保存快捷键”后生效`;
+        });
+
+        item.input.addEventListener("click", () => {
+            item.input.select();
+            statusTextEl.textContent = "状态：请按下想设置的快捷键";
+        });
+    }
+}
+
+
+function readShortcutConfigInputs() {
+    const bindings = getShortcutInputBindings();
+
+    const nextConfig = {
+        ...shortcutConfig,
+        selectBoxKeys: defaultShortcutConfig.selectBoxKeys
+    };
+
+    for (const item of bindings) {
+        const value = normalizeShortcutKey(item.input.value.trim() || item.defaultValue);
+        nextConfig[item.key] = value;
+    }
+
+    const conflictMessage = findShortcutConflictMessage(nextConfig);
+
+    if (conflictMessage) {
+        statusTextEl.textContent = conflictMessage;
+        return;
+    }
+
+    shortcutConfig = nextConfig;
+    saveShortcutConfig(shortcutConfig);
+    fillShortcutConfigInputs();
+
+    statusTextEl.textContent = "状态：快捷键配置已保存";
+}
+
+
+function resetShortcutConfig() {
+    shortcutConfig = {
+        ...defaultShortcutConfig
+    };
+
+    saveShortcutConfig(shortcutConfig);
+    fillShortcutConfigInputs();
+
+    statusTextEl.textContent = "状态：已恢复默认快捷键";
+}
+
+
+function findShortcutConflictMessage(config) {
+    const keys = [
+        config.previousImage,
+        config.nextImage,
+        config.saveXml,
+        config.savePreviousImage,
+        config.saveNextImage,
+        config.yoloDetect,
+        config.groundingDinoDetect,
+        config.deleteBox,
+        config.clearBoxes,
+        config.reloadAnnotation,
+        config.cancelSelect,
+        config.rejectImage,
+    ];
+
+    const countMap = {};
+    const duplicated = [];
+
+    for (const key of keys) {
+        const normalizedKey = normalizeShortcutKey(key);
+
+        if (!countMap[normalizedKey]) {
+            countMap[normalizedKey] = 0;
+        }
+
+        countMap[normalizedKey] += 1;
+    }
+
+    for (const key in countMap) {
+        if (countMap[key] > 1) {
+            duplicated.push(key);
+        }
+    }
+
+    if (duplicated.length > 0) {
+        return `状态：快捷键重复：${duplicated.join(", ")}，请修改后再保存`;
+    }
+
+    const reserved = defaultShortcutConfig.selectBoxKeys.map(key => normalizeShortcutKey(key));
+    const usedReservedKeys = keys
+        .map(key => normalizeShortcutKey(key))
+        .filter(key => reserved.includes(key));
+
+    if (usedReservedKeys.length > 0) {
+        return `状态：${usedReservedKeys.join(", ")} 已固定用于选择框，不能设置为其他快捷键`;
+    }
+
+    return "";
+}
+
+
+function showPreviewWallView() {
+    const mainLayout = document.querySelector(".main-layout");
+
+    if (!previewWallView || !mainLayout) {
+        return;
+    }
+
+    mainLayout.classList.add("hidden");
+    previewWallView.classList.remove("hidden");
+
+    previewWallPage = 1;
+    renderPreviewWall();
+}
+
+
+function showLabelView() {
+    const mainLayout = document.querySelector(".main-layout");
+
+    if (!previewWallView || !mainLayout) {
+        return;
+    }
+
+    previewWallView.classList.add("hidden");
+    mainLayout.classList.remove("hidden");
+
+    resizeCanvasToDisplaySize();
+    redrawCanvas();
+}
+
+
+function isPreviewWallVisible() {
+    if (!previewWallView) {
+        return false;
+    }
+
+    return !previewWallView.classList.contains("hidden");
+}
 
 
 async function loadImageList() {
@@ -46,8 +463,13 @@ async function loadImageList() {
             return;
         }
 
-        renderImageList(data.images);
-        imageCountEl.textContent = `图片数量：${data.count}`;
+        allImages = data.images || [];
+        renderImageList();
+
+        if (isPreviewWallVisible()) {
+            renderPreviewWall();
+        }
+
         statusTextEl.textContent = "状态：图片列表加载完成";
     } catch (error) {
         console.error(error);
@@ -56,30 +478,275 @@ async function loadImageList() {
 }
 
 
-function renderImageList(images) {
-    imageListEl.innerHTML = "";
+async function loadYoloModels() {
+    try {
+        const response = await fetch("/api/yolo_models");
+        const data = await response.json();
 
-    if (images.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "暂无图片，请把图片放入 data/JPEGImages";
-        imageListEl.appendChild(li);
-        return;
-    }
+        if (!data.success) {
+            statusTextEl.textContent = "状态：加载 YOLO 模型列表失败";
+            return;
+        }
 
-    for (const imageName of images) {
-        const li = document.createElement("li");
-        li.textContent = imageName;
+        yoloModelSelectEl.innerHTML = "";
 
-        li.addEventListener("click", () => {
-            selectImage(imageName, li);
-        });
+        for (const model of data.models) {
+            const option = document.createElement("option");
+            option.value = model.id;
+            option.textContent = model.name;
+            yoloModelSelectEl.appendChild(option);
+        }
 
-        imageListEl.appendChild(li);
+        if (data.default_model !== undefined && data.default_model !== null) {
+            yoloModelSelectEl.value = String(data.default_model);
+        }
+    } catch (error) {
+        console.error(error);
+        statusTextEl.textContent = "状态：无法加载 YOLO 模型列表";
     }
 }
 
 
-function selectImage(imageName, liElement) {
+function renderImageList() {
+    imageListEl.innerHTML = "";
+
+    const keyword = imageSearchInput.value.trim().toLowerCase();
+
+    filteredImages = allImages.filter(imageName => {
+        if (!keyword) {
+            return true;
+        }
+
+        return imageName.toLowerCase().includes(keyword);
+    });
+
+    imageCountEl.textContent = `图片数量：${filteredImages.length} / ${allImages.length}`;
+
+    if (filteredImages.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "没有匹配的图片";
+        imageListEl.appendChild(li);
+        return;
+    }
+
+    for (const imageName of filteredImages) {
+        const li = document.createElement("li");
+        li.classList.add("image-item");
+        li.dataset.imageName = imageName;
+
+        if (imageName === currentImageName) {
+            li.classList.add("active");
+        }
+
+        const previewCanvas = document.createElement("canvas");
+        previewCanvas.classList.add("thumbnail-canvas");
+        previewCanvas.width = 96;
+        previewCanvas.height = 72;
+
+        const nameDiv = document.createElement("div");
+        nameDiv.classList.add("image-item-name");
+        nameDiv.textContent = imageName;
+
+        li.appendChild(previewCanvas);
+        li.appendChild(nameDiv);
+
+        li.addEventListener("click", () => {
+            selectImage(imageName);
+        });
+
+        imageListEl.appendChild(li);
+
+        drawThumbnail(imageName, previewCanvas);
+    }
+}
+
+
+function renderPreviewWall() {
+    if (!previewWallGrid) {
+        return;
+    }
+
+    previewWallGrid.innerHTML = "";
+
+    const keyword = previewWallSearchInput ? previewWallSearchInput.value.trim().toLowerCase() : "";
+
+    const previewImages = allImages.filter(imageName => {
+        if (!keyword) {
+            return true;
+        }
+
+        return imageName.toLowerCase().includes(keyword);
+    });
+
+    const totalPages = Math.max(1, Math.ceil(previewImages.length / previewWallPageSize));
+
+    if (previewWallPage > totalPages) {
+        previewWallPage = totalPages;
+    }
+
+    if (previewWallPage < 1) {
+        previewWallPage = 1;
+    }
+
+    const startIndex = (previewWallPage - 1) * previewWallPageSize;
+    const endIndex = startIndex + previewWallPageSize;
+    const pageImages = previewImages.slice(startIndex, endIndex);
+
+    if (previewWallPageInfo) {
+        previewWallPageInfo.textContent = `第 ${previewWallPage} / ${totalPages} 页，共 ${previewImages.length} 张`;
+    }
+
+    if (pageImages.length === 0) {
+        const emptyDiv = document.createElement("div");
+        emptyDiv.classList.add("preview-wall-empty");
+        emptyDiv.textContent = "没有匹配的图片";
+        previewWallGrid.appendChild(emptyDiv);
+        return;
+    }
+
+    for (const imageName of pageImages) {
+        const item = document.createElement("div");
+        item.classList.add("preview-wall-item");
+
+        if (imageName === currentImageName) {
+            item.classList.add("active");
+        }
+
+        const wallCanvas = document.createElement("canvas");
+        wallCanvas.width = 120;
+        wallCanvas.height = 80;
+
+        const nameDiv = document.createElement("div");
+        nameDiv.classList.add("preview-wall-name");
+        nameDiv.textContent = imageName;
+
+        item.appendChild(wallCanvas);
+        item.appendChild(nameDiv);
+
+        item.addEventListener("click", () => {
+            showLabelView();
+            selectImage(imageName);
+        });
+
+        previewWallGrid.appendChild(item);
+
+        drawThumbnail(imageName, wallCanvas);
+    }
+}
+
+
+async function drawThumbnail(imageName, previewCanvas) {
+    const previewCtx = previewCanvas.getContext("2d");
+
+    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    previewCtx.fillStyle = "#eeeeee";
+    previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+    const img = new Image();
+
+    img.onload = async () => {
+        const imgW = img.naturalWidth;
+        const imgH = img.naturalHeight;
+
+        const scale = Math.min(
+            previewCanvas.width / imgW,
+            previewCanvas.height / imgH
+        );
+
+        const drawW = imgW * scale;
+        const drawH = imgH * scale;
+        const offsetX = (previewCanvas.width - drawW) / 2;
+        const offsetY = (previewCanvas.height - drawH) / 2;
+
+        previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+        previewCtx.drawImage(
+            img,
+            offsetX,
+            offsetY,
+            drawW,
+            drawH
+        );
+
+        try {
+            const response = await fetch(`/api/annotation/${encodeURIComponent(imageName)}`);
+            const data = await response.json();
+
+            if (!data.success) {
+                return;
+            }
+
+            const result = data.result;
+            const previewBoxes = result.boxes || [];
+
+            previewCtx.lineWidth = 1;
+            previewCtx.strokeStyle = "#00ff00";
+
+            for (const box of previewBoxes) {
+                const x1 = offsetX + box[0] * scale;
+                const y1 = offsetY + box[1] * scale;
+                const x2 = offsetX + box[2] * scale;
+                const y2 = offsetY + box[3] * scale;
+
+                previewCtx.strokeRect(
+                    x1,
+                    y1,
+                    x2 - x1,
+                    y2 - y1
+                );
+            }
+        } catch (error) {
+            console.error("缩略图标注读取失败：", imageName, error);
+        }
+    };
+
+    img.onerror = () => {
+        previewCtx.fillStyle = "#999999";
+        previewCtx.font = "12px Arial";
+        previewCtx.textAlign = "center";
+        previewCtx.textBaseline = "middle";
+        previewCtx.fillText(
+            "加载失败",
+            previewCanvas.width / 2,
+            previewCanvas.height / 2
+        );
+    };
+
+    img.src = `/api/image/${encodeURIComponent(imageName)}`;
+}
+
+
+function getImageItemLi(imageName) {
+    const items = document.querySelectorAll("#imageList li");
+
+    for (const li of items) {
+        if (li.dataset.imageName === imageName) {
+            return li;
+        }
+    }
+
+    return null;
+}
+
+
+function refreshThumbnail(imageName) {
+    const li = getImageItemLi(imageName);
+
+    if (!li) {
+        return;
+    }
+
+    const previewCanvas = li.querySelector("canvas");
+
+    if (!previewCanvas) {
+        return;
+    }
+
+    drawThumbnail(imageName, previewCanvas);
+}
+
+
+function selectImage(imageName) {
     currentImageName = imageName;
     boxes = [];
     selectedBoxIndex = -1;
@@ -87,7 +754,12 @@ function selectImage(imageName, liElement) {
     document.querySelectorAll("#imageList li").forEach(li => {
         li.classList.remove("active");
     });
-    liElement.classList.add("active");
+
+    const activeLi = getImageItemLi(imageName);
+
+    if (activeLi) {
+        activeLi.classList.add("active");
+    }
 
     currentImage = new Image();
 
@@ -107,6 +779,36 @@ function selectImage(imageName, liElement) {
     };
 
     currentImage.src = `/api/image/${encodeURIComponent(imageName)}`;
+}
+
+
+function selectPreviousImage() {
+    if (filteredImages.length === 0) {
+        return;
+    }
+
+    let index = filteredImages.indexOf(currentImageName);
+
+    if (index <= 0) {
+        index = filteredImages.length;
+    }
+
+    selectImage(filteredImages[index - 1]);
+}
+
+
+function selectNextImage() {
+    if (filteredImages.length === 0) {
+        return;
+    }
+
+    let index = filteredImages.indexOf(currentImageName);
+
+    if (index === -1 || index >= filteredImages.length - 1) {
+        index = -1;
+    }
+
+    selectImage(filteredImages[index + 1]);
 }
 
 
@@ -174,9 +876,10 @@ function redrawCanvas() {
 
 
 function drawEmptyHint() {
-    ctx.fillStyle = "#777";
+    ctx.fillStyle = "#777777";
     ctx.font = "18px Arial";
     ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText("请从左侧选择一张图片", canvas.width / 2, canvas.height / 2);
 }
 
@@ -186,8 +889,10 @@ function drawAllBoxes() {
         const box = boxes[i];
         const canvasBox = imageBoxToCanvasBox(box);
 
-        ctx.lineWidth = i === selectedBoxIndex ? 3 : 2;
-        ctx.strokeStyle = i === selectedBoxIndex ? "#ff0000" : "#00aa00";
+        const isSelected = i === selectedBoxIndex;
+
+        ctx.lineWidth = isSelected ? 3 : 2;
+        ctx.strokeStyle = isSelected ? "#ff0000" : "#00ff00";
 
         ctx.strokeRect(
             canvasBox.x,
@@ -196,12 +901,21 @@ function drawAllBoxes() {
             canvasBox.h
         );
 
-        ctx.fillStyle = i === selectedBoxIndex ? "#ff0000" : "#00aa00";
-        ctx.font = "14px Arial";
+        const labelText = ` ${i + 1}`;
+
+        ctx.font = "bold 14px Arial";
+
+        const labelPaddingX = 0;
+        const labelHeight = 20;
+
+        const labelX = canvasBox.x;
+        const labelY = Math.max(canvasBox.y - labelHeight, 0);
+
+        ctx.fillStyle = "#ff69b4";
         ctx.fillText(
-            `object ${i + 1}`,
-            canvasBox.x + 4,
-            canvasBox.y + 16
+            labelText,
+            labelX + labelPaddingX,
+            labelY + 15
         );
     }
 }
@@ -289,24 +1003,6 @@ function makeImageBoxFromCanvasPoints(p1, p2) {
 }
 
 
-function findBoxAtCanvasPoint(point) {
-    for (let i = boxes.length - 1; i >= 0; i--) {
-        const b = imageBoxToCanvasBox(boxes[i]);
-
-        if (
-            point.x >= b.x &&
-            point.x <= b.x + b.w &&
-            point.y >= b.y &&
-            point.y <= b.y + b.h
-        ) {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-
 function renderBoxList() {
     boxListEl.innerHTML = "";
     boxCountEl.textContent = `框数量：${boxes.length}`;
@@ -329,19 +1025,43 @@ function renderBoxList() {
         }
 
         li.addEventListener("click", () => {
-            selectedBoxIndex = i;
-            renderBoxList();
-            redrawCanvas();
+            selectBoxByIndex(i);
         });
 
         boxListEl.appendChild(li);
     }
 }
 
+
+function selectBoxByIndex(index) {
+    if (index < 0 || index >= boxes.length) {
+        statusTextEl.textContent = `状态：第 ${index + 1} 个框不存在`;
+        return;
+    }
+
+    selectedBoxIndex = index;
+
+    renderBoxList();
+    redrawCanvas();
+
+    statusTextEl.textContent = `状态：已选中第 ${index + 1} 个框`;
+}
+
+
+function cancelSelectedBox() {
+    selectedBoxIndex = -1;
+
+    renderBoxList();
+    redrawCanvas();
+
+    statusTextEl.textContent = "状态：已取消选中框";
+}
+
+
 async function saveXml() {
     if (!currentImageName) {
         statusTextEl.textContent = "状态：请先选择一张图片";
-        return;
+        return false;
     }
 
     const payload = {
@@ -364,16 +1084,169 @@ async function saveXml() {
 
         if (!data.success) {
             statusTextEl.textContent = `状态：保存失败，${data.message}`;
-            return;
+            return false;
         }
 
         const result = data.result;
         statusTextEl.textContent = `状态：保存成功，${result.xml_name}，框数量 ${result.box_count}`;
+
+        refreshThumbnail(currentImageName);
+
+        return true;
     } catch (error) {
         console.error(error);
         statusTextEl.textContent = "状态：保存失败，无法连接后端";
+        return false;
     }
 }
+
+async function rejectCurrentImage() {
+    if (!currentImageName) {
+        statusTextEl.textContent = "状态：请先选择一张图片";
+        return;
+    }
+
+    const imageNameToReject = currentImageName;
+    const currentIndex = filteredImages.indexOf(imageNameToReject);
+
+    const confirmed = window.confirm(
+        `确认把 ${imageNameToReject} 移入废弃区吗？\n对应 XML 也会一起移动。`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    statusTextEl.textContent = `状态：正在移入废弃区：${imageNameToReject}`;
+
+    try {
+        const response = await fetch("/api/reject_image", {
+            method: "POST",
+            headers: {
+                "Content-Type":"application/json"
+            },
+            body: JSON.stringify({
+                image_name:imageNameToReject
+            })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            statusTextEl.textContent = `状态：移入废弃区失败，${data.message}`;
+            return;
+        }
+
+        allImages = allImages.filter(name => name !== imageNameToReject);
+        filteredImages = filteredImages.filter(name => name !== imageNameToReject);
+
+        boxes = [];
+        selectedBoxIndex = -1;
+        currentImage = null;
+        currentImageName = null;
+
+        renderImageList();
+        renderBoxList();
+        redrawCanvas();
+
+        statusTextEl.textContent = `状态：已移入废弃区：${imageNameToReject}`;
+
+        if (filteredImages.length > 0) {
+            let nextIndex = currentIndex;
+
+            if (nextIndex >= filteredImages.length) {
+                nextIndex = filteredImages.length - 1;
+            }
+
+            selectImage(filteredImages[nextIndex]);
+        } else {
+            currentImageNameEl.textContent = "当前图片：无";
+        }
+
+        if (typeof renderPreviewWall === "function" && isPreviewWallVisible()) {
+            renderPreviewWall();
+        }
+    } catch (error) {
+        console.error(error);
+        statusTextEl.textContent = "状态：移入废弃区失败，无法连接后端";
+    }
+}
+
+async function saveAndSelectPreviousImage() {
+    const success = await saveXml();
+
+    if (!success) {
+        return;
+    }
+
+    selectPreviousImage();
+}
+
+
+async function saveAndSelectNextImage() {
+    const success = await saveXml();
+
+    if (!success) {
+        return;
+    }
+
+    selectNextImage();
+}
+
+
+async function backupAnnotations() {
+    statusTextEl.textContent = "状态：正在备份 Annotations...";
+
+    try {
+        const response = await fetch("/api/backup_annotations");
+
+        if (!response.ok) {
+            let message = "备份失败";
+
+            try {
+                const data = await response.json();
+                message = data.message || message;
+            } catch {
+                // 忽略 JSON 解析失败
+            }
+
+            statusTextEl.textContent = `状态：${message}`;
+            return;
+        }
+
+        const blob = await response.blob();
+
+        let fileName = "Annotations_backup.zip";
+
+        const disposition = response.headers.get("Content-Disposition");
+
+        if (disposition) {
+            const match = disposition.match(/filename="?([^"]+)"?/);
+
+            if (match && match[1]) {
+                fileName = decodeURIComponent(match[1]);
+            }
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+
+        a.href = url;
+        a.download = fileName;
+
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        window.URL.revokeObjectURL(url);
+
+        statusTextEl.textContent = `状态：备份完成，${fileName}`;
+    } catch (error) {
+        console.error(error);
+        statusTextEl.textContent = "状态：备份失败，无法连接后端";
+    }
+}
+
 
 async function loadAnnotation(imageName) {
     try {
@@ -404,17 +1277,48 @@ async function loadAnnotation(imageName) {
     }
 }
 
-async function autoDetect() {
+
+async function autoDetect(detector) {
     if (!currentImageName) {
         statusTextEl.textContent = "状态：请先选择一张图片";
         return;
     }
 
     const payload = {
-        image_name: currentImageName
+        image_name: currentImageName,
+        detector: detector
     };
 
-    statusTextEl.textContent = "状态：正在自动标注...";
+    if (detector === "yolo") {
+        payload.model_select = yoloModelSelectEl.value;
+    }
+
+    if (detector === "grounding_dino") {
+        payload.prompt = groundingPromptInput.value.trim();
+
+        payload.box_threshold = getNumberInputValue(
+            groundingBoxThresholdInput,
+            groundingDinoDefaultConfig.boxThreshold
+        );
+
+        payload.text_threshold = getNumberInputValue(
+            groundingTextThresholdInput,
+            groundingDinoDefaultConfig.textThreshold
+        );
+
+        payload.use_nms = groundingUseNmsInput.checked;
+
+        payload.nms_iou_threshold = getNumberInputValue(
+            groundingNmsIouInput,
+            groundingDinoDefaultConfig.nmsIouThreshold
+        );
+    }
+
+    const detectorName = detector === "yolo"
+        ? `YOLO模型 ${payload.model_select}`
+        : "Grounding DINO";
+
+    statusTextEl.textContent = `状态：正在使用 ${detectorName} 自动标注...`;
 
     try {
         const response = await fetch("/api/detect", {
@@ -434,22 +1338,63 @@ async function autoDetect() {
             return;
         }
 
-        // 当前策略：自动标注结果直接替换当前 boxes
-        // 后面如果你想“追加到已有框”，这里可以改成 boxes = boxes.concat(data.boxes)
         boxes = data.boxes || [];
         selectedBoxIndex = -1;
 
         renderBoxList();
         redrawCanvas();
 
-        statusTextEl.textContent = `状态：自动标注完成，框数量 ${boxes.length}`;
+        statusTextEl.textContent = `状态：${detectorName} 标注完成，框数量 ${boxes.length}`;
     } catch (error) {
         console.error("自动标注请求失败：", error);
         statusTextEl.textContent = "状态：自动标注失败，无法连接后端";
     }
 }
 
+
+function deleteSelectedBox() {
+    if (boxes.length === 0) {
+        statusTextEl.textContent = "状态：当前没有框可删除";
+        return;
+    }
+
+    if (selectedBoxIndex < 0 || selectedBoxIndex >= boxes.length) {
+        selectedBoxIndex = boxes.length - 1;
+    }
+
+    const deletedIndex = selectedBoxIndex;
+
+    boxes.splice(selectedBoxIndex, 1);
+
+    if (boxes.length === 0) {
+        selectedBoxIndex = -1;
+    } else if (deletedIndex >= boxes.length) {
+        selectedBoxIndex = boxes.length - 1;
+    } else {
+        selectedBoxIndex = deletedIndex;
+    }
+
+    renderBoxList();
+    redrawCanvas();
+
+    statusTextEl.textContent = `状态：已删除第 ${deletedIndex + 1} 个框`;
+}
+
+
+function clearAllBoxes() {
+    boxes = [];
+    selectedBoxIndex = -1;
+
+    renderBoxList();
+    redrawCanvas();
+
+    statusTextEl.textContent = "状态：已清空所有框";
+}
+
+
 canvas.addEventListener("mousedown", (event) => {
+    canvas.focus();
+
     if (!currentImage) {
         return;
     }
@@ -460,15 +1405,6 @@ canvas.addEventListener("mousedown", (event) => {
     const point = getMousePosition(event);
 
     if (!isPointInsideDisplayedImage(point)) {
-        return;
-    }
-
-    const hitIndex = findBoxAtCanvasPoint(point);
-
-    if (hitIndex !== -1) {
-        selectedBoxIndex = hitIndex;
-        renderBoxList();
-        redrawCanvas();
         return;
     }
 
@@ -488,7 +1424,6 @@ canvas.addEventListener("mousemove", (event) => {
 
     currentPoint = getMousePosition(event);
 
-    // 限制临时框不要画到图片显示区域外面
     currentPoint.x = clamp(
         currentPoint.x,
         imageView.offsetX,
@@ -517,7 +1452,6 @@ canvas.addEventListener("mouseup", () => {
     const width = newBox[2] - newBox[0];
     const height = newBox[3] - newBox[1];
 
-    // 太小的框不要保存，防止误点
     if (width >= 3 && height >= 3) {
         boxes.push(newBox);
         selectedBoxIndex = boxes.length - 1;
@@ -541,35 +1475,177 @@ canvas.addEventListener("mouseleave", () => {
 });
 
 
-deleteBoxBtn.addEventListener("click", () => {
-    if (selectedBoxIndex < 0 || selectedBoxIndex >= boxes.length) {
-        statusTextEl.textContent = "状态：请先选中一个框";
+deleteBoxBtn.addEventListener("click", deleteSelectedBox);
+clearBoxesBtn.addEventListener("click", clearAllBoxes);
+
+if (backupAnnotationsBtn) {
+    backupAnnotationsBtn.addEventListener("click", backupAnnotations);
+}
+
+if (openPreviewWallBtn) {
+    openPreviewWallBtn.addEventListener("click", showPreviewWallView);
+}
+
+if (backToLabelViewBtn) {
+    backToLabelViewBtn.addEventListener("click", showLabelView);
+}
+
+if (saveShortcutConfigBtn) {
+    saveShortcutConfigBtn.addEventListener("click", readShortcutConfigInputs);
+}
+
+if (resetShortcutConfigBtn) {
+    resetShortcutConfigBtn.addEventListener("click", resetShortcutConfig);
+}
+
+if (rejectImageBtn) {
+    rejectImageBtn.addEventListener("click", rejectCurrentImage);
+}
+
+yoloDetectBtn.addEventListener("click", () => {
+    autoDetect("yolo");
+});
+
+groundingDinoDetectBtn.addEventListener("click", () => {
+    autoDetect("grounding_dino");
+});
+
+refreshBtn.addEventListener("click", loadImageList);
+saveXmlBtn.addEventListener("click", saveXml);
+
+imageSearchInput.addEventListener("input", () => {
+    renderImageList();
+});
+
+if (previewWallSearchInput) {
+    previewWallSearchInput.addEventListener("input", () => {
+        previewWallPage = 1;
+        renderPreviewWall();
+    });
+}
+
+if (previewWallRefreshBtn) {
+    previewWallRefreshBtn.addEventListener("click", () => {
+        renderPreviewWall();
+    });
+}
+
+if (previewWallPrevPageBtn) {
+    previewWallPrevPageBtn.addEventListener("click", () => {
+        if (previewWallPage > 1) {
+            previewWallPage -= 1;
+        }
+
+        renderPreviewWall();
+    });
+}
+
+if (previewWallNextPageBtn) {
+    previewWallNextPageBtn.addEventListener("click", () => {
+        previewWallPage += 1;
+        renderPreviewWall();
+    });
+}
+
+
+document.addEventListener("keydown", async (event) => {
+    const target = event.target;
+    const tagName = target.tagName.toLowerCase();
+
+    if (tagName === "input" || tagName === "select" || tagName === "textarea") {
         return;
     }
 
-    boxes.splice(selectedBoxIndex, 1);
-    selectedBoxIndex = -1;
+    const selectBoxIndex = shortcutConfig.selectBoxKeys.findIndex(shortcut => {
+        return eventMatchesShortcut(event, shortcut);
+    });
 
-    renderBoxList();
-    redrawCanvas();
+    if (selectBoxIndex !== -1) {
+        event.preventDefault();
+        selectBoxByIndex(selectBoxIndex);
+        return;
+    }
 
-    statusTextEl.textContent = "状态：已删除选中框";
+    if (eventMatchesShortcut(event, shortcutConfig.cancelSelect)) {
+        event.preventDefault();
+        cancelSelectedBox();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.previousImage)) {
+        event.preventDefault();
+        selectPreviousImage();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.nextImage)) {
+        event.preventDefault();
+        selectNextImage();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.saveXml)) {
+        event.preventDefault();
+        await saveXml();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.savePreviousImage)) {
+        event.preventDefault();
+        await saveAndSelectPreviousImage();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.saveNextImage)) {
+        event.preventDefault();
+        await saveAndSelectNextImage();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.yoloDetect)) {
+        event.preventDefault();
+        autoDetect("yolo");
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.groundingDinoDetect)) {
+        event.preventDefault();
+        autoDetect("grounding_dino");
+        return;
+    }
+
+    if (
+        eventMatchesShortcut(event, shortcutConfig.deleteBox) ||
+        eventMatchesShortcut(event, "backspace")
+    ) {
+        event.preventDefault();
+        deleteSelectedBox();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.clearBoxes)) {
+        event.preventDefault();
+        clearAllBoxes();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.reloadAnnotation)) {
+        event.preventDefault();
+
+        if (currentImageName) {
+            loadAnnotation(currentImageName);
+        }
+
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.rejectImage)) {
+        event.preventDefault();
+        await rejectCurrentImage();
+        return;
+    }
 });
 
-
-clearBoxesBtn.addEventListener("click", () => {
-    boxes = [];
-    selectedBoxIndex = -1;
-
-    renderBoxList();
-    redrawCanvas();
-
-    statusTextEl.textContent = "状态：已清空所有框";
-});
-
-autoDetectBtn.addEventListener("click", autoDetect);
-refreshBtn.addEventListener("click", loadImageList);
-saveXmlBtn.addEventListener("click", saveXml);
 
 window.addEventListener("resize", () => {
     resizeCanvasToDisplaySize();
@@ -580,4 +1656,8 @@ window.addEventListener("resize", () => {
 // 页面打开后初始化
 resizeCanvasToDisplaySize();
 redrawCanvas();
+initGroundingDinoInputs();
+fillShortcutConfigInputs();
+bindShortcutInputCapture();
+loadYoloModels();
 loadImageList();

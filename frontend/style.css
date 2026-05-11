@@ -122,3 +122,311 @@ button:focus {
     display: block;
     cursor: crosshair;
 }
+
+.top-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+.top-label select {
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.image-search {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.image-item {
+    display: grid;
+    grid-template-columns: 104px 1fr;
+    gap: 8px;
+    align-items: center;
+}
+
+.thumbnail-canvas {
+    width: 96px;
+    height: 72px;
+    background: #eee;
+    border: 1px solid #ddd;
+}
+
+.image-item-name {
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.shortcut-help {
+    font-size: 13px;
+    color: #444;
+    line-height: 1.3;
+}
+
+.shortcut-help p {
+    margin: 4px 0;
+}
+
+.grounding-config {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.grounding-config label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.grounding-config textarea {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: Consolas, monospace;
+    font-size: 13px;
+}
+
+.grounding-config input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.grounding-config .checkbox-label {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.shortcut-config {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.shortcut-config label {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    align-items: center;
+    gap: 6px;
+}
+
+.shortcut-config input {
+    padding: 5px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #fff;
+}
+
+.shortcut-config input:focus {
+    outline: 2px solid #409eff;
+    border-color: #409eff;
+}
+
+.shortcut-config-hint {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.shortcut-config-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.shortcut-config-buttons button {
+    padding: 6px 8px;
+}
+
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.image-list-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #ffffff;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+#imageList {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.preview-wall-panel {
+    border-top: 1px solid #ddd;
+    background: #f8f8f8;
+    padding: 10px;
+    height: 260px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-wall-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.preview-wall-header h2 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.preview-wall-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-wall-controls input {
+    width: 180px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.preview-wall-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+}
+
+.preview-wall-item {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 5px;
+    cursor: pointer;
+}
+
+.preview-wall-item.active {
+    border-color: #ff0000;
+    box-shadow: 0 0 0 2px rgba(255,0,0,0.2);
+}
+
+.preview-wall-item canvas {
+    width: 100%;
+    height: 80px;
+    background: #eee;
+    border: 1px solid #ddd;
+}
+
+.preview-wall-name {
+    font-size: 12px;
+    margin-top: 4px;
+    text-align: center;
+    word-break: break-all;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.preview-wall-view {
+    height: calc(100vh - 60px);
+    box-sizing: border-box;
+    padding: 12px;
+    background: #f7f7f7;
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-wall-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+.preview-wall-topbar h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.preview-wall-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-wall-controls input {
+    width: 220px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.preview-wall-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+}
+
+.preview-wall-item {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 6px;
+    cursor: pointer;
+}
+
+.preview-wall-item:hover {
+    border-color: #409eff;
+}
+
+.preview-wall-item.active {
+    border-color: #ff0000;
+    box-shadow: 0 0 0 2px rgba(255,0,0,0.25);
+}
+
+.preview-wall-item canvas {
+    width: 100%;
+    height: 90px;
+    background: #eee;
+    border: 1px solid #ddd;
+}
+
+.preview-wall-name {
+    font-size: 12px;
+    margin-top: 4px;
+    text-align: center;
+    word-break: break-all;
+}
+
+.preview-wall-empty {
+    color: #666;
+    font-size: 14px;
+    padding: 20px;
+}
