@@ -13,8 +13,9 @@ from config import(
     GROUNDING_DINO_REQUEST_TIMEOUT,
 )
 
-def get_boxes_by_grounding_dino_worker(image_path,options=None):
-    '''请求Grounding DINO worker,返回boxes'''
+
+def detect_by_grounding_dino_worker(image_path,options=None):
+    '''请求Grounding DINO worker,返回完整检测结果'''
     image_path=Path(image_path)
 
     payload={
@@ -60,4 +61,4 @@ def get_boxes_by_grounding_dino_worker(image_path,options=None):
     if not result.get("success"):
         raise RuntimeError(f"Grounding DINO worker检测失败:{result.get('message')}")
 
-    return result.get("boxes",[])
+    return result

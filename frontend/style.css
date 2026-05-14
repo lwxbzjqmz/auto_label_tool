@@ -430,3 +430,46 @@ button:focus {
     font-size: 14px;
     padding: 20px;
 }
+
+.box-list-item {
+    padding: 6px 8px;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.box-list-item.active {
+    background: #ffecec;
+    border-left: 4px solid #ff0000;
+}
+
+.box-list-title {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.box-list-coord {
+    color: #555;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+}
+
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#imageList {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+.image-item.active {
+    background: #ffecec;
+    border-left: 4px solid #ff0000;
+}

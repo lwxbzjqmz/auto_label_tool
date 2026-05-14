@@ -4,7 +4,7 @@ from config import FRONTEND_DIR,IMAGE_DIR,ANNOTATION_DIR,MODEL_SELECT,DEFAULT_DE
 from image_manager import list_images
 from xml_writer import write_voc_xml
 from xml_reader import read_voc_xml
-from detector import get_boxes
+from detector import get_detect_result
 from grounding_dino_manager import start_grounding_dino_worker,stop_grounding_dino_worker
 from yolov3_mbv2.model_paths import list_yolov3_mbv2_models
 from backup_manager import make_annotations_backup
@@ -202,21 +202,27 @@ def api_detect():
         }),404
     
     try:
-        boxes=get_boxes(image_path,
-                        detector=detector,
-                        model_select=model_select,
-                        grounding_dino_options=grounding_dino_options
-                        )
+        detect_result=get_detect_result(
+            image_path,
+            detector=detector,
+            model_select=model_select,
+            grounding_dino_options=grounding_dino_options
+        )
+
+        boxes=detect_result.get("boxes",[])
+        objects=detect_result.get("objects",[])
+
     except Exception as e:
         return jsonify({
             "success":False,
             "message":f"Detect failed:{e}"
         }),500
-    
+
     return jsonify({
         "success":True,
         "message":"Detect success",
         "boxes":boxes,
+        "objects":objects,
         "box_count":len(boxes)
     })
 

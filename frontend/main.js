@@ -61,6 +61,7 @@ let currentImageName = null;
 let currentImage = null;
 
 let boxes = [];
+let boxInfos = [];
 let selectedBoxIndex = -1;
 
 let isDrawing = false;
@@ -554,6 +555,10 @@ function renderImageList() {
             selectImage(imageName);
         });
 
+        requestAnimationFrame(() => {
+            scrollCurrentImageIntoView();
+        });
+
         imageListEl.appendChild(li);
 
         drawThumbnail(imageName, previewCanvas);
@@ -728,6 +733,23 @@ function getImageItemLi(imageName) {
     return null;
 }
 
+function scrollCurrentImageIntoView() {
+    if (!currentImageName) {
+        return;
+    }
+
+    const activeLi = getImageItemLi(currentImageName);
+
+    if (!activeLi) {
+        return;
+    }
+
+    activeLi.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+        behavior: "smooth"
+    });
+}
 
 function refreshThumbnail(imageName) {
     const li = getImageItemLi(imageName);
@@ -749,6 +771,7 @@ function refreshThumbnail(imageName) {
 function selectImage(imageName) {
     currentImageName = imageName;
     boxes = [];
+    boxInfos = [];
     selectedBoxIndex = -1;
 
     document.querySelectorAll("#imageList li").forEach(li => {
@@ -759,6 +782,10 @@ function selectImage(imageName) {
 
     if (activeLi) {
         activeLi.classList.add("active");
+
+        requestAnimationFrame(() => {
+            scrollCurrentImageIntoView();
+        });
     }
 
     currentImage = new Image();
@@ -1002,6 +1029,36 @@ function makeImageBoxFromCanvasPoints(p1, p2) {
     return [xmin, ymin, xmax, ymax];
 }
 
+function makeDefaultBoxInfo() {
+    return {
+        name: "object",
+        score: null
+    };
+}
+
+
+function normalizeObjectsToBoxesAndInfos(objects) {
+    const nextBoxes = [];
+    const nextBoxInfos = [];
+
+    for (const obj of objects) {
+        if (!obj.box || obj.box.length !== 4) {
+            continue;
+        }
+
+        nextBoxes.push(obj.box);
+
+        nextBoxInfos.push({
+            name: obj.name || "object",
+            score: typeof obj.score === "number" ? obj.score : null
+        });
+    }
+
+    return {
+        boxes: nextBoxes,
+        boxInfos: nextBoxInfos
+    };
+}
 
 function renderBoxList() {
     boxListEl.innerHTML = "";
@@ -1016,13 +1073,28 @@ function renderBoxList() {
 
     for (let i = 0; i < boxes.length; i++) {
         const box = boxes[i];
+        const info = boxInfos[i] || makeDefaultBoxInfo();
 
         const li = document.createElement("li");
-        li.textContent = `${i + 1}: [${box[0]}, ${box[1]}, ${box[2]}, ${box[3]}]`;
+        li.classList.add("box-list-item");
 
         if (i === selectedBoxIndex) {
             li.classList.add("active");
         }
+
+        const scoreText = info.score === null || info.score === undefined
+            ? "-"
+            : Number(info.score).toFixed(3);
+
+        li.innerHTML = `
+            <div class="box-list-title">
+                <span>${i + 1}. ${escapeHtml(info.name)}</span>
+                <span>score: ${scoreText}</span>
+            </div>
+            <div class="box-list-coord">
+                [${box[0]}, ${box[1]}, ${box[2]}, ${box[3]}]
+            </div>
+        `;
 
         li.addEventListener("click", () => {
             selectBoxByIndex(i);
@@ -1030,6 +1102,16 @@ function renderBoxList() {
 
         boxListEl.appendChild(li);
     }
+}
+
+
+function escapeHtml(text) {
+    return String(text)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
 }
 
 
@@ -1141,6 +1223,7 @@ async function rejectCurrentImage() {
         filteredImages = filteredImages.filter(name => name !== imageNameToReject);
 
         boxes = [];
+        boxInfos = [];
         selectedBoxIndex = -1;
         currentImage = null;
         currentImageName = null;
@@ -1261,6 +1344,7 @@ async function loadAnnotation(imageName) {
         const result = data.result;
 
         boxes = result.boxes || [];
+        boxInfos = boxes.map(() => makeDefaultBoxInfo());
         selectedBoxIndex = -1;
 
         renderBoxList();
@@ -1338,11 +1422,21 @@ async function autoDetect(detector) {
             return;
         }
 
-        boxes = data.boxes || [];
+        if (Array.isArray(data.objects) && data.objects.length > 0) {
+            const normalized = normalizeObjectsToBoxesAndInfos(data.objects);
+
+            boxes = normalized.boxes;
+            boxInfos = normalized.boxInfos;
+        } else {
+            boxes = data.boxes || [];
+            boxInfos = boxes.map(() => makeDefaultBoxInfo());
+        }
+
         selectedBoxIndex = -1;
 
         renderBoxList();
         redrawCanvas();
+        canvas.focus();
 
         statusTextEl.textContent = `状态：${detectorName} 标注完成，框数量 ${boxes.length}`;
     } catch (error) {
@@ -1365,6 +1459,7 @@ function deleteSelectedBox() {
     const deletedIndex = selectedBoxIndex;
 
     boxes.splice(selectedBoxIndex, 1);
+    boxInfos.splice(selectedBoxIndex, 1);
 
     if (boxes.length === 0) {
         selectedBoxIndex = -1;
@@ -1383,6 +1478,7 @@ function deleteSelectedBox() {
 
 function clearAllBoxes() {
     boxes = [];
+    boxInfos = [];
     selectedBoxIndex = -1;
 
     renderBoxList();
@@ -1454,6 +1550,7 @@ canvas.addEventListener("mouseup", () => {
 
     if (width >= 3 && height >= 3) {
         boxes.push(newBox);
+        boxInfos.push(makeDefaultBoxInfo());
         selectedBoxIndex = boxes.length - 1;
     }
 
