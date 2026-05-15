@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="color-scheme" content="light dark">
     <title>Auto Label Tool</title>
     <link rel="stylesheet" href="/frontend/style.css">
 </head>
@@ -12,20 +13,19 @@
 
             <button id="refreshBtn">刷新图片列表</button>
 
-            <label class="top-label">
-                YOLO模型
-                <select id="yoloModelSelect"></select>
-            </label>
+            <span class="split-btn-group">
+                <button id="yoloDetectBtn" class="btn-primary split-btn-main">YOLO标注</button>
+                <button id="yoloModelDropdownBtn" class="btn-primary split-btn-arrow" title="切换模型">▾</button>
+                <ul id="yoloModelDropdown" class="dropdown-menu hidden"></ul>
+            </span>
+            <button id="groundingDinoDetectBtn" class="btn-accent">Grounding DINO标注</button>
 
-            <button id="yoloDetectBtn">YOLO标注</button>
-            <button id="groundingDinoDetectBtn">Grounding DINO标注</button>
-
-            <button id="saveXmlBtn">保存 XML</button>
-            <button id="deleteBoxBtn">删除选中框</button>
-            <button id="clearBoxesBtn">清空所有框</button>
+            <button id="saveXmlBtn" class="btn-primary">保存 XML</button>
+            <button id="deleteBoxBtn" class="btn-danger">删除选中框</button>
+            <button id="clearBoxesBtn" class="btn-danger">清空所有框</button>
             <button id="backupAnnotationsBtn">备份</button>
             <button id="openPreviewWallBtn">图片预览墙</button>
-            <button id="rejectImageBtn">移入废弃区</button>
+            <button id="rejectImageBtn" class="btn-danger">移入废弃区</button>
         </header>
 
         <main class="main-layout">
@@ -192,12 +192,11 @@
                     <div class="preview-wall-controls">
                         <input id="previewWallSearchInput" placeholder="搜索图片名，例如 03598">
 
+                        <input type="range" id="previewWallZoomSlider" class="preview-wall-zoom-slider"
+                               min="0.4" max="2.5" step="0.1" value="1.0" title="缩略图缩放">
+                        <span id="previewWallZoomLabel" class="preview-wall-zoom-label">100%</span>
+
                         <button id="previewWallRefreshBtn">刷新预览</button>
-                        <button id="previewWallPrevPageBtn">上一页</button>
-
-                        <span id="previewWallPageInfo">第 1 页</span>
-
-                        <button id="previewWallNextPageBtn">下一页</button>
                         <button id="backToLabelViewBtn">返回标注页面</button>
                     </div>
                 </div>

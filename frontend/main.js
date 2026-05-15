@@ -11,8 +11,10 @@ const statusTextEl = document.getElementById("statusText");
 const refreshBtn = document.getElementById("refreshBtn");
 
 const yoloDetectBtn = document.getElementById("yoloDetectBtn");
+const yoloModelDropdownBtn = document.getElementById("yoloModelDropdownBtn");
+const yoloModelDropdown = document.getElementById("yoloModelDropdown");
 const groundingDinoDetectBtn = document.getElementById("groundingDinoDetectBtn");
-const yoloModelSelectEl = document.getElementById("yoloModelSelect");
+let currentYoloModelId = null;
 const imageSearchInput = document.getElementById("imageSearchInput");
 const rejectImageBtn = document.getElementById("rejectImageBtn");
 
@@ -34,9 +36,8 @@ const previewWallView = document.getElementById("previewWallView");
 const previewWallGrid = document.getElementById("previewWallGrid");
 const previewWallSearchInput = document.getElementById("previewWallSearchInput");
 const previewWallRefreshBtn = document.getElementById("previewWallRefreshBtn");
-const previewWallPrevPageBtn = document.getElementById("previewWallPrevPageBtn");
-const previewWallNextPageBtn = document.getElementById("previewWallNextPageBtn");
-const previewWallPageInfo = document.getElementById("previewWallPageInfo");
+const previewWallZoomSlider = document.getElementById("previewWallZoomSlider");
+const previewWallZoomLabel = document.getElementById("previewWallZoomLabel");
 
 const shortcutPreviousImageInput = document.getElementById("shortcutPreviousImageInput");
 const shortcutNextImageInput = document.getElementById("shortcutNextImageInput");
@@ -68,8 +69,56 @@ let isDrawing = false;
 let startPoint = null;
 let currentPoint = null;
 
-let previewWallPage = 1;
-const previewWallPageSize = 40;
+// ---- 深色模式 Canvas 颜色适配 ----
+const canvasColors = {
+    emptyHint: "#777777",
+    selectedBox: "#ff0000",
+    normalBox: "#00ff00",
+    labelText: "#ff69b4",
+    tempBox: "#0066ff",
+    thumbnailBg: "#eeeeee",
+    thumbnailErrorText: "#999999",
+    previewBoxStroke: "#00ff00",
+};
+
+function updateCanvasColors() {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        canvasColors.emptyHint = "#aaaaaa";
+        canvasColors.selectedBox = "#ff4444";
+        canvasColors.normalBox = "#44ff44";
+        canvasColors.labelText = "#ff88cc";
+        canvasColors.tempBox = "#4488ff";
+        canvasColors.thumbnailBg = "#333333";
+        canvasColors.thumbnailErrorText = "#888888";
+        canvasColors.previewBoxStroke = "#44ff44";
+    } else {
+        canvasColors.emptyHint = "#777777";
+        canvasColors.selectedBox = "#ff0000";
+        canvasColors.normalBox = "#00ff00";
+        canvasColors.labelText = "#ff69b4";
+        canvasColors.tempBox = "#0066ff";
+        canvasColors.thumbnailBg = "#eeeeee";
+        canvasColors.thumbnailErrorText = "#999999";
+        canvasColors.previewBoxStroke = "#00ff00";
+    }
+}
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    updateCanvasColors();
+    redrawCanvas();
+    renderImageList();
+    if (typeof isPreviewWallVisible === 'function' && isPreviewWallVisible()) {
+        renderPreviewWall();
+    }
+});
+
+let previewWallZoom = 1.0;
+let previewWallLoadedCount = 0;
+let previewWallFiltered = [];
+let previewWallSentinel = null;
+let previewWallObserver = null;
+let previewWallZoomTimer = null;
+const PREVIEW_WALL_BATCH_SIZE = 24;
 
 let imageView = {
     offsetX: 0,
@@ -423,7 +472,10 @@ function showPreviewWallView() {
     mainLayout.classList.add("hidden");
     previewWallView.classList.remove("hidden");
 
-    previewWallPage = 1;
+    if (previewWallZoomSlider) {
+        previewWallZoomSlider.value = String(previewWallZoom);
+    }
+    updatePreviewWallZoom(previewWallZoom);
     renderPreviewWall();
 }
 
@@ -433,6 +485,11 @@ function showLabelView() {
 
     if (!previewWallView || !mainLayout) {
         return;
+    }
+
+    if (previewWallObserver) {
+        previewWallObserver.disconnect();
+        previewWallObserver = null;
     }
 
     previewWallView.classList.add("hidden");
@@ -489,22 +546,58 @@ async function loadYoloModels() {
             return;
         }
 
-        yoloModelSelectEl.innerHTML = "";
-
-        for (const model of data.models) {
-            const option = document.createElement("option");
-            option.value = model.id;
-            option.textContent = model.name;
-            yoloModelSelectEl.appendChild(option);
-        }
+        yoloModelDropdown.innerHTML = "";
 
         if (data.default_model !== undefined && data.default_model !== null) {
-            yoloModelSelectEl.value = String(data.default_model);
+            currentYoloModelId = String(data.default_model);
+        } else if (data.models.length > 0) {
+            currentYoloModelId = String(data.models[0].id);
+        }
+
+        for (const model of data.models) {
+            const li = document.createElement("li");
+            li.textContent = model.name;
+            li.dataset.modelId = model.id;
+
+            if (String(model.id) === currentYoloModelId) {
+                li.classList.add("selected");
+                yoloDetectBtn.textContent = model.name;
+            }
+
+            li.addEventListener("click", (event) => {
+                event.stopPropagation();
+                currentYoloModelId = String(model.id);
+                yoloDetectBtn.textContent = model.name;
+
+                yoloModelDropdown.querySelectorAll("li").forEach(item => {
+                    item.classList.toggle("selected", item.dataset.modelId === currentYoloModelId);
+                });
+
+                closeYoloModelDropdown();
+            });
+
+            yoloModelDropdown.appendChild(li);
         }
     } catch (error) {
         console.error(error);
         statusTextEl.textContent = "状态：无法加载 YOLO 模型列表";
     }
+}
+
+function toggleYoloModelDropdown() {
+    if (!yoloModelDropdown) {
+        return;
+    }
+
+    yoloModelDropdown.classList.toggle("hidden");
+}
+
+function closeYoloModelDropdown() {
+    if (!yoloModelDropdown) {
+        return;
+    }
+
+    yoloModelDropdown.classList.add("hidden");
 }
 
 
@@ -566,42 +659,161 @@ function renderImageList() {
 }
 
 
+function getPreviewCanvasDims(zoom) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    return {
+        w: Math.round(120 * zoom * dpr),
+        h: Math.round(80 * zoom * dpr)
+    };
+}
+
+function updatePreviewWallZoom(value) {
+    previewWallZoom = value;
+    previewWallGrid.style.setProperty("--zoom", String(value));
+    if (previewWallZoomLabel) {
+        previewWallZoomLabel.textContent = Math.round(value * 100) + "%";
+    }
+}
+
+function createPreviewWallItem(imageName) {
+    const item = document.createElement("div");
+    item.classList.add("preview-wall-item");
+    item.dataset.imageName = imageName;
+
+    if (imageName === currentImageName) {
+        item.classList.add("active");
+    }
+
+    const dims = getPreviewCanvasDims(previewWallZoom);
+    const wallCanvas = document.createElement("canvas");
+    wallCanvas.width = dims.w;
+    wallCanvas.height = dims.h;
+
+    const nameDiv = document.createElement("div");
+    nameDiv.classList.add("preview-wall-name");
+    nameDiv.textContent = imageName;
+
+    item.appendChild(wallCanvas);
+    item.appendChild(nameDiv);
+
+    item.addEventListener("click", () => {
+        showLabelView();
+        selectImage(imageName);
+    });
+
+    return item;
+}
+
+function createPreviewWallSentinel() {
+    const sentinel = document.createElement("div");
+    sentinel.classList.add("preview-wall-sentinel");
+    return sentinel;
+}
+
+function loadNextPreviewWallBatch() {
+    if (previewWallLoadedCount >= previewWallFiltered.length) {
+        if (previewWallObserver && previewWallSentinel) {
+            previewWallObserver.unobserve(previewWallSentinel);
+        }
+        return;
+    }
+
+    const startIndex = previewWallLoadedCount;
+    const endIndex = Math.min(startIndex + PREVIEW_WALL_BATCH_SIZE, previewWallFiltered.length);
+    const batch = previewWallFiltered.slice(startIndex, endIndex);
+
+    if (batch.length === 0) {
+        return;
+    }
+
+    if (previewWallSentinel && previewWallSentinel.parentNode) {
+        previewWallSentinel.remove();
+    }
+
+    for (const imageName of batch) {
+        const item = createPreviewWallItem(imageName);
+        previewWallGrid.appendChild(item);
+        const canvas = item.querySelector("canvas");
+        drawThumbnail(imageName, canvas);
+    }
+
+    previewWallLoadedCount = endIndex;
+
+    if (!previewWallSentinel) {
+        previewWallSentinel = createPreviewWallSentinel();
+    }
+    previewWallGrid.appendChild(previewWallSentinel);
+
+    if (previewWallObserver) {
+        previewWallObserver.observe(previewWallSentinel);
+    }
+}
+
+function setupPreviewWallObserver() {
+    if (previewWallObserver) {
+        previewWallObserver.disconnect();
+    }
+
+    previewWallObserver = new IntersectionObserver((entries) => {
+        if (entries[0] && entries[0].isIntersecting) {
+            loadNextPreviewWallBatch();
+        }
+    }, {
+        root: previewWallGrid,
+        rootMargin: "300px",
+        threshold: 0
+    });
+
+    if (previewWallSentinel) {
+        previewWallObserver.observe(previewWallSentinel);
+    }
+}
+
+function redrawAllPreviewCanvases() {
+    const dims = getPreviewCanvasDims(previewWallZoom);
+    const items = previewWallGrid.querySelectorAll(".preview-wall-item");
+
+    for (const item of items) {
+        const canvas = item.querySelector("canvas");
+        if (!canvas) {
+            continue;
+        }
+
+        canvas.width = dims.w;
+        canvas.height = dims.h;
+
+        const imageName = item.dataset.imageName;
+        if (imageName) {
+            drawThumbnail(imageName, canvas);
+        }
+    }
+}
+
 function renderPreviewWall() {
     if (!previewWallGrid) {
         return;
+    }
+
+    if (previewWallObserver) {
+        previewWallObserver.disconnect();
+        previewWallObserver = null;
     }
 
     previewWallGrid.innerHTML = "";
 
     const keyword = previewWallSearchInput ? previewWallSearchInput.value.trim().toLowerCase() : "";
 
-    const previewImages = allImages.filter(imageName => {
+    previewWallFiltered = allImages.filter(imageName => {
         if (!keyword) {
             return true;
         }
-
         return imageName.toLowerCase().includes(keyword);
     });
 
-    const totalPages = Math.max(1, Math.ceil(previewImages.length / previewWallPageSize));
+    previewWallLoadedCount = 0;
+    previewWallSentinel = null;
 
-    if (previewWallPage > totalPages) {
-        previewWallPage = totalPages;
-    }
-
-    if (previewWallPage < 1) {
-        previewWallPage = 1;
-    }
-
-    const startIndex = (previewWallPage - 1) * previewWallPageSize;
-    const endIndex = startIndex + previewWallPageSize;
-    const pageImages = previewImages.slice(startIndex, endIndex);
-
-    if (previewWallPageInfo) {
-        previewWallPageInfo.textContent = `第 ${previewWallPage} / ${totalPages} 页，共 ${previewImages.length} 张`;
-    }
-
-    if (pageImages.length === 0) {
+    if (previewWallFiltered.length === 0) {
         const emptyDiv = document.createElement("div");
         emptyDiv.classList.add("preview-wall-empty");
         emptyDiv.textContent = "没有匹配的图片";
@@ -609,34 +821,11 @@ function renderPreviewWall() {
         return;
     }
 
-    for (const imageName of pageImages) {
-        const item = document.createElement("div");
-        item.classList.add("preview-wall-item");
+    previewWallSentinel = createPreviewWallSentinel();
+    previewWallGrid.appendChild(previewWallSentinel);
 
-        if (imageName === currentImageName) {
-            item.classList.add("active");
-        }
-
-        const wallCanvas = document.createElement("canvas");
-        wallCanvas.width = 120;
-        wallCanvas.height = 80;
-
-        const nameDiv = document.createElement("div");
-        nameDiv.classList.add("preview-wall-name");
-        nameDiv.textContent = imageName;
-
-        item.appendChild(wallCanvas);
-        item.appendChild(nameDiv);
-
-        item.addEventListener("click", () => {
-            showLabelView();
-            selectImage(imageName);
-        });
-
-        previewWallGrid.appendChild(item);
-
-        drawThumbnail(imageName, wallCanvas);
-    }
+    setupPreviewWallObserver();
+    loadNextPreviewWallBatch();
 }
 
 
@@ -644,7 +833,7 @@ async function drawThumbnail(imageName, previewCanvas) {
     const previewCtx = previewCanvas.getContext("2d");
 
     previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-    previewCtx.fillStyle = "#eeeeee";
+    previewCtx.fillStyle = canvasColors.thumbnailBg;
     previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
 
     const img = new Image();
@@ -685,7 +874,7 @@ async function drawThumbnail(imageName, previewCanvas) {
             const previewBoxes = result.boxes || [];
 
             previewCtx.lineWidth = 1;
-            previewCtx.strokeStyle = "#00ff00";
+            previewCtx.strokeStyle = canvasColors.previewBoxStroke;
 
             for (const box of previewBoxes) {
                 const x1 = offsetX + box[0] * scale;
@@ -706,7 +895,7 @@ async function drawThumbnail(imageName, previewCanvas) {
     };
 
     img.onerror = () => {
-        previewCtx.fillStyle = "#999999";
+        previewCtx.fillStyle = canvasColors.thumbnailErrorText;
         previewCtx.font = "12px Arial";
         previewCtx.textAlign = "center";
         previewCtx.textBaseline = "middle";
@@ -903,7 +1092,7 @@ function redrawCanvas() {
 
 
 function drawEmptyHint() {
-    ctx.fillStyle = "#777777";
+    ctx.fillStyle = canvasColors.emptyHint;
     ctx.font = "18px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -919,7 +1108,7 @@ function drawAllBoxes() {
         const isSelected = i === selectedBoxIndex;
 
         ctx.lineWidth = isSelected ? 3 : 2;
-        ctx.strokeStyle = isSelected ? "#ff0000" : "#00ff00";
+        ctx.strokeStyle = isSelected ? canvasColors.selectedBox : canvasColors.normalBox;
 
         ctx.strokeRect(
             canvasBox.x,
@@ -938,7 +1127,7 @@ function drawAllBoxes() {
         const labelX = canvasBox.x;
         const labelY = Math.max(canvasBox.y - labelHeight, 0);
 
-        ctx.fillStyle = "#ff69b4";
+        ctx.fillStyle = canvasColors.labelText;
         ctx.fillText(
             labelText,
             labelX + labelPaddingX,
@@ -955,7 +1144,7 @@ function drawTempBox() {
     const h = Math.abs(currentPoint.y - startPoint.y);
 
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "#0066ff";
+    ctx.strokeStyle = canvasColors.tempBox;
     ctx.strokeRect(x, y, w, h);
 }
 
@@ -1362,7 +1551,7 @@ async function loadAnnotation(imageName) {
 }
 
 
-async function autoDetect(detector) {
+async function autoDetect(detector, yoloModelId) {
     if (!currentImageName) {
         statusTextEl.textContent = "状态：请先选择一张图片";
         return;
@@ -1374,7 +1563,7 @@ async function autoDetect(detector) {
     };
 
     if (detector === "yolo") {
-        payload.model_select = yoloModelSelectEl.value;
+        payload.model_select = yoloModelId || currentYoloModelId;
     }
 
     if (detector === "grounding_dino") {
@@ -1600,7 +1789,24 @@ if (rejectImageBtn) {
 }
 
 yoloDetectBtn.addEventListener("click", () => {
-    autoDetect("yolo");
+    autoDetect("yolo", currentYoloModelId);
+});
+
+if (yoloModelDropdownBtn) {
+    yoloModelDropdownBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleYoloModelDropdown();
+    });
+}
+
+document.addEventListener("click", (event) => {
+    if (!yoloModelDropdown || !yoloModelDropdownBtn) {
+        return;
+    }
+
+    if (!yoloModelDropdownBtn.contains(event.target) && !yoloModelDropdown.contains(event.target)) {
+        closeYoloModelDropdown();
+    }
 });
 
 groundingDinoDetectBtn.addEventListener("click", () => {
@@ -1616,7 +1822,6 @@ imageSearchInput.addEventListener("input", () => {
 
 if (previewWallSearchInput) {
     previewWallSearchInput.addEventListener("input", () => {
-        previewWallPage = 1;
         renderPreviewWall();
     });
 }
@@ -1627,21 +1832,37 @@ if (previewWallRefreshBtn) {
     });
 }
 
-if (previewWallPrevPageBtn) {
-    previewWallPrevPageBtn.addEventListener("click", () => {
-        if (previewWallPage > 1) {
-            previewWallPage -= 1;
-        }
+if (previewWallZoomSlider) {
+    previewWallZoomSlider.addEventListener("input", () => {
+        const value = parseFloat(previewWallZoomSlider.value);
+        updatePreviewWallZoom(value);
 
-        renderPreviewWall();
+        if (previewWallZoomTimer) {
+            clearTimeout(previewWallZoomTimer);
+        }
+        previewWallZoomTimer = setTimeout(() => {
+            redrawAllPreviewCanvases();
+        }, 250);
     });
 }
 
-if (previewWallNextPageBtn) {
-    previewWallNextPageBtn.addEventListener("click", () => {
-        previewWallPage += 1;
-        renderPreviewWall();
-    });
+if (previewWallGrid) {
+    previewWallGrid.addEventListener("wheel", (event) => {
+        if (!event.ctrlKey) {
+            return;
+        }
+        event.preventDefault();
+
+        const delta = event.deltaY > 0 ? -0.1 : 0.1;
+        let newZoom = previewWallZoom + delta;
+        newZoom = Math.max(0.4, Math.min(2.5, newZoom));
+        newZoom = Math.round(newZoom * 10) / 10;
+
+        if (previewWallZoomSlider) {
+            previewWallZoomSlider.value = String(newZoom);
+            previewWallZoomSlider.dispatchEvent(new Event("input"));
+        }
+    }, { passive: false });
 }
 
 
@@ -1701,7 +1922,7 @@ document.addEventListener("keydown", async (event) => {
 
     if (eventMatchesShortcut(event, shortcutConfig.yoloDetect)) {
         event.preventDefault();
-        autoDetect("yolo");
+        autoDetect("yolo", currentYoloModelId);
         return;
     }
 
@@ -1751,6 +1972,7 @@ window.addEventListener("resize", () => {
 
 
 // 页面打开后初始化
+updateCanvasColors();
 resizeCanvasToDisplaySize();
 redrawCanvas();
 initGroundingDinoInputs();

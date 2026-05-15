@@ -1,12 +1,236 @@
+/* ===== CSS Custom Properties ===== */
+:root {
+    color-scheme: light dark;
+
+    /* Body */
+    --color-bg-body: #f0f2f5;
+    --color-text-body: #222;
+
+    /* Panels */
+    --color-bg-panel: #ffffff;
+    --color-border-panel: #e2e6ed;
+    --shadow-panel: 0 1px 4px rgba(0,0,0,0.04);
+
+    /* Top bar */
+    --color-topbar-bg: #3d3d3d;
+    --color-topbar-text: #ffffff;
+    --shadow-topbar: 0 2px 8px rgba(0,0,0,0.15);
+
+    /* Buttons - default */
+    --color-btn-bg: #ffffff;
+    --color-btn-border: #d0d5dd;
+    --color-btn-text: #344054;
+    --color-btn-bg-hover: #f5f6f8;
+    --color-btn-border-hover: #b0b8c4;
+    --color-btn-bg-active: #e8eaed;
+    --shadow-btn-hover: 0 2px 6px rgba(0,0,0,0.08);
+    --color-focus-outline: #7aa7ff;
+
+    /* Buttons - primary (blue) */
+    --color-primary: #4A90D9;
+    --color-primary-hover: #3d7bc8;
+    --color-primary-active: #346cb5;
+    --color-primary-text: #ffffff;
+    --shadow-primary-hover: 0 4px 12px rgba(74,144,217,0.35);
+
+    /* Buttons - accent (purple) */
+    --color-accent: #7B68EE;
+    --color-accent-hover: #6a58d8;
+    --color-accent-active: #5b4ac4;
+    --color-accent-text: #ffffff;
+    --shadow-accent-hover: 0 4px 12px rgba(123,104,238,0.35);
+
+    /* Buttons - danger (red outline) */
+    --color-danger-text: #E85D75;
+    --color-danger-border: #E85D75;
+    --color-danger-hover-text: #d44a62;
+    --color-danger-hover-border: #d44a62;
+    --color-danger-bg-hover: #fff5f5;
+    --color-danger-bg-active: #ffe8e8;
+
+    /* Inputs / textareas / selects */
+    --color-input-bg: #ffffff;
+    --color-input-border: #cccccc;
+    --color-input-focus-border: #409eff;
+    --color-input-focus-outline: #409eff;
+
+    /* Dropdown menu */
+    --color-dropdown-bg: #ffffff;
+    --color-dropdown-border: #e2e6ed;
+    --color-dropdown-text: #344054;
+    --color-dropdown-hover-bg: #f0f4ff;
+    --color-dropdown-hover-text: #4A90D9;
+    --color-dropdown-selected-bg: #e8f0fe;
+    --color-dropdown-selected-text: #4A90D9;
+    --shadow-dropdown: 0 6px 20px rgba(0,0,0,0.12);
+
+    /* Split button arrow separator */
+    --color-split-arrow-separator: rgba(255,255,255,0.3);
+
+    /* List items */
+    --color-list-hover-bg: #f0f0f0;
+    --color-list-active-bg: #dceeff;
+    --color-list-border: #eeeeee;
+    --color-box-list-active-bg: #ffecec;
+    --color-image-item-active-bg: #ffecec;
+    --color-active-indicator: #ff0000;
+    --color-box-list-border: #dddddd;
+
+    /* Image list header */
+    --color-image-list-header-bg: #ffffff;
+    --color-image-list-header-border: #dddddd;
+
+    /* Canvas area */
+    --color-canvas-bg: #fafbfc;
+    --color-canvas-border: #dde1e7;
+    --shadow-canvas-inset: inset 0 1px 3px rgba(0,0,0,0.04);
+
+    /* Preview wall */
+    --color-preview-wall-bg: #f7f7f7;
+    --color-preview-item-bg: #ffffff;
+    --color-preview-item-border: #dddddd;
+    --color-preview-item-hover-border: #409eff;
+    --color-preview-panel-bg: #f8f8f8;
+    --color-preview-separator: #dddddd;
+    --color-preview-empty-text: #666666;
+    --color-preview-loading-text: #888888;
+    --color-thumbnail-bg: #eeeeee;
+    --color-thumbnail-border: #dddddd;
+
+    /* Misc text */
+    --color-text-muted: #444444;
+    --color-text-dim: #666666;
+    --color-text-coord: #555555;
+
+    /* Scrollbar */
+    --color-scrollbar-thumb: #c8cdd4;
+    --color-scrollbar-thumb-hover: #a0a8b2;
+    --color-scrollbar-track: transparent;
+
+    /* Shortcut config hint */
+    --color-shortcut-hint: #666666;
+
+    /* Grounding config group label border */
+    --color-config-separator: #cccccc;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Body */
+        --color-bg-body: #1e1e1e;
+        --color-text-body: #e0e0e0;
+
+        /* Panels */
+        --color-bg-panel: #252525;
+        --color-border-panel: #3a3a3a;
+        --shadow-panel: 0 1px 4px rgba(0,0,0,0.5);
+
+        /* Top bar */
+        --shadow-topbar: 0 2px 8px rgba(0,0,0,0.7);
+
+        /* Buttons - default */
+        --color-btn-bg: #333333;
+        --color-btn-border: #4a4a4a;
+        --color-btn-text: #d0d0d0;
+        --color-btn-bg-hover: #3d3d3d;
+        --color-btn-border-hover: #555555;
+        --color-btn-bg-active: #454545;
+        --shadow-btn-hover: 0 2px 6px rgba(0,0,0,0.5);
+        --color-focus-outline: #6a9aee;
+
+        /* Buttons - primary (blue) */
+        --color-primary: #4a8bd8;
+        --color-primary-hover: #3d7bc8;
+        --color-primary-active: #346cb5;
+        --shadow-primary-hover: 0 4px 12px rgba(74,139,216,0.35);
+
+        /* Buttons - accent (purple) */
+        --color-accent: #7a68e8;
+        --color-accent-hover: #6a58d8;
+        --color-accent-active: #5b4ac4;
+        --shadow-accent-hover: 0 4px 12px rgba(122,104,232,0.35);
+
+        /* Buttons - danger */
+        --color-danger-text: #ff6b7a;
+        --color-danger-border: #ff6b7a;
+        --color-danger-hover-text: #ff8090;
+        --color-danger-hover-border: #ff8090;
+        --color-danger-bg-hover: #3a1818;
+        --color-danger-bg-active: #4a2020;
+
+        /* Inputs */
+        --color-input-bg: #333333;
+        --color-input-border: #4a4a4a;
+        --color-input-focus-border: #5aaeff;
+        --color-input-focus-outline: #5aaeff;
+
+        /* Dropdown menu */
+        --color-dropdown-bg: #333333;
+        --color-dropdown-border: #3a3a3a;
+        --color-dropdown-text: #d0d0d0;
+        --color-dropdown-hover-bg: #3d3d3d;
+        --color-dropdown-hover-text: #6ab0ff;
+        --color-dropdown-selected-bg: #1a2a3a;
+        --color-dropdown-selected-text: #6ab0ff;
+        --shadow-dropdown: 0 6px 20px rgba(0,0,0,0.7);
+
+        /* List items */
+        --color-list-hover-bg: #2a2a2a;
+        --color-list-active-bg: #1a2a3d;
+        --color-list-border: #333333;
+        --color-box-list-active-bg: #3a1818;
+        --color-image-item-active-bg: #3a1818;
+        --color-active-indicator: #ff4444;
+        --color-box-list-border: #3a3a3a;
+
+        /* Image list header */
+        --color-image-list-header-bg: #252525;
+        --color-image-list-header-border: #333333;
+
+        /* Canvas area */
+        --color-canvas-bg: #181818;
+        --color-canvas-border: #3a3a3a;
+        --shadow-canvas-inset: inset 0 1px 3px rgba(0,0,0,0.5);
+
+        /* Preview wall */
+        --color-preview-wall-bg: #1e1e1e;
+        --color-preview-item-bg: #252525;
+        --color-preview-item-border: #3a3a3a;
+        --color-preview-item-hover-border: #5aaeff;
+        --color-preview-panel-bg: #252525;
+        --color-preview-separator: #333333;
+        --color-preview-empty-text: #888888;
+        --color-preview-loading-text: #777777;
+        --color-thumbnail-bg: #333333;
+        --color-thumbnail-border: #4a4a4a;
+
+        /* Misc text */
+        --color-text-muted: #a0a0a0;
+        --color-text-dim: #888888;
+        --color-text-coord: #999999;
+
+        /* Scrollbar */
+        --color-scrollbar-thumb: #555555;
+        --color-scrollbar-thumb-hover: #666666;
+
+        /* Shortcut config hint */
+        --color-shortcut-hint: #888888;
+
+        /* Grounding config group label border */
+        --color-config-separator: #4a4a4a;
+    }
+}
+
+/* ===== Base ===== */
 * {
     box-sizing: border-box;
 }
 
 body {
     margin: 0;
-    font-family: Arial, "Microsoft YaHei", sans-serif;
-    background: #f5f5f5;
-    color: #222;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--color-bg-body);
+    color: var(--color-text-body);
 }
 
 .app {
@@ -18,11 +242,12 @@ body {
 .top-bar {
     height: 60px;
     padding: 0 20px;
-    background: #222;
-    color: white;
+    background: var(--color-topbar-bg);
+    color: var(--color-topbar-text);
     display: flex;
     align-items: center;
     gap: 12px;
+    box-shadow: var(--shadow-topbar);
 }
 
 .top-bar h1 {
@@ -30,30 +255,143 @@ body {
     margin: 0 20px 0 0;
 }
 
+/* ===== 按钮基础 ===== */
 button {
     appearance: none;
     -webkit-appearance: none;
-    padding: 8px 14px;
-    border: 1px solid #ccc;
+    padding: 8px 16px;
+    border: 1px solid var(--color-btn-border);
     cursor: pointer;
-    border-radius: 4px;
-    background-color: #e8e8e8;
-    color: #222;
+    border-radius: 6px;
+    background: var(--color-btn-bg);
+    color: var(--color-btn-text);
     font-size: 14px;
     font-family: inherit;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 button:hover {
-    background-color: #d8d8d8;
+    background: var(--color-btn-bg-hover);
+    border-color: var(--color-btn-border-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-btn-hover);
 }
 
 button:active {
-    background-color: #c8c8c8;
+    background: var(--color-btn-bg-active);
+    transform: translateY(0);
+    box-shadow: none;
 }
 
 button:focus {
-    outline: 2px solid #7aa7ff;
+    outline: 2px solid var(--color-focus-outline);
     outline-offset: 2px;
+}
+
+/* 主要按钮（保存、检测） - 与普通按钮同色 */
+.btn-primary {
+    background: var(--color-btn-bg);
+    border-color: var(--color-btn-border);
+    color: var(--color-btn-text);
+}
+.btn-primary:hover {
+    background: var(--color-btn-bg-hover);
+    border-color: var(--color-btn-border-hover);
+    box-shadow: var(--shadow-btn-hover);
+}
+.btn-primary:active {
+    background: var(--color-btn-bg-active);
+}
+
+/* 紫色按钮（Grounding DINO） - 与普通按钮同色 */
+.btn-accent {
+    background: var(--color-btn-bg);
+    border-color: var(--color-btn-border);
+    color: var(--color-btn-text);
+}
+.btn-accent:hover {
+    background: var(--color-btn-bg-hover);
+    border-color: var(--color-btn-border-hover);
+    box-shadow: var(--shadow-btn-hover);
+}
+.btn-accent:active {
+    background: var(--color-btn-bg-active);
+}
+
+/* 危险按钮（删除、清空、废弃） - 与普通按钮同色 */
+.btn-danger {
+    background: var(--color-btn-bg);
+    border-color: var(--color-btn-border);
+    color: var(--color-btn-text);
+}
+.btn-danger:hover {
+    background: var(--color-btn-bg-hover);
+    border-color: var(--color-btn-border-hover);
+    box-shadow: var(--shadow-btn-hover);
+}
+.btn-danger:active {
+    background: var(--color-btn-bg-active);
+}
+
+/* ===== 分裂按钮 ===== */
+.split-btn-group {
+    display: inline-flex;
+    position: relative;
+}
+
+.split-btn-main {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.split-btn-arrow {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 1px solid var(--color-split-arrow-separator);
+    padding: 8px 10px;
+    min-width: 28px;
+    font-size: 10px;
+}
+
+/* ===== 下拉菜单 ===== */
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin: 4px 0 0 0;
+    padding: 4px 0;
+    list-style: none;
+    background: var(--color-dropdown-bg);
+    border: 1px solid var(--color-dropdown-border);
+    border-radius: 6px;
+    box-shadow: var(--shadow-dropdown);
+    z-index: 100;
+    min-width: 100%;
+    white-space: nowrap;
+}
+
+.dropdown-menu li {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-dropdown-text);
+}
+
+.dropdown-menu li:hover {
+    background: var(--color-dropdown-hover-bg);
+    color: var(--color-dropdown-hover-text);
+}
+
+.dropdown-menu li.selected {
+    background: var(--color-dropdown-selected-bg);
+    color: var(--color-dropdown-selected-text);
+    font-weight: 600;
+}
+
+.dropdown-menu.hidden {
+    display: none;
 }
 
 .main-layout {
@@ -68,10 +406,12 @@ button:focus {
 .left-panel,
 .center-panel,
 .right-panel {
-    background: white;
-    border: 1px solid #ddd;
-    padding: 12px;
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border-panel);
+    border-radius: 8px;
+    padding: 16px;
     overflow: auto;
+    box-shadow: var(--shadow-panel);
 }
 
 .left-panel h2,
@@ -91,7 +431,7 @@ button:focus {
 #imageList li,
 #boxList li {
     padding: 8px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-list-border);
     cursor: pointer;
     word-break: break-all;
     font-size: 13px;
@@ -99,21 +439,23 @@ button:focus {
 
 #imageList li:hover,
 #boxList li:hover {
-    background: #f0f0f0;
+    background: var(--color-list-hover-bg);
 }
 
 #imageList li.active,
 #boxList li.active {
-    background: #dceeff;
+    background: var(--color-list-active-bg);
 }
 
 .canvas-box {
     width: 100%;
     height: calc(100vh - 140px);
-    border: 1px dashed #aaa;
-    background: #fafafa;
+    border: 1px solid var(--color-canvas-border);
+    border-radius: 6px;
+    background: var(--color-canvas-bg);
     overflow: hidden;
     position: relative;
+    box-shadow: var(--shadow-canvas-inset);
 }
 
 #imageCanvas {
@@ -133,15 +475,19 @@ button:focus {
 .top-label select {
     padding: 6px 8px;
     border-radius: 4px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-input-border);
+    background: var(--color-input-bg);
+    color: var(--color-text-body);
 }
 
 .image-search {
     width: 100%;
     padding: 8px;
     margin-bottom: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-input-border);
     border-radius: 4px;
+    background: var(--color-input-bg);
+    color: var(--color-text-body);
 }
 
 .image-item {
@@ -154,8 +500,8 @@ button:focus {
 .thumbnail-canvas {
     width: 96px;
     height: 72px;
-    background: #eee;
-    border: 1px solid #ddd;
+    background: var(--color-thumbnail-bg);
+    border: 1px solid var(--color-thumbnail-border);
 }
 
 .image-item-name {
@@ -165,7 +511,7 @@ button:focus {
 
 .shortcut-help {
     font-size: 13px;
-    color: #444;
+    color: var(--color-text-muted);
     line-height: 1.3;
 }
 
@@ -191,18 +537,22 @@ button:focus {
     box-sizing: border-box;
     resize: vertical;
     padding: 6px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-input-border);
     border-radius: 4px;
     font-family: Consolas, monospace;
     font-size: 13px;
+    background: var(--color-input-bg);
+    color: var(--color-text-body);
 }
 
 .grounding-config input[type="number"] {
     width: 100%;
     box-sizing: border-box;
     padding: 6px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-input-border);
     border-radius: 4px;
+    background: var(--color-input-bg);
+    color: var(--color-text-body);
 }
 
 .grounding-config .checkbox-label {
@@ -227,20 +577,21 @@ button:focus {
 
 .shortcut-config input {
     padding: 5px 6px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-input-border);
     border-radius: 4px;
     cursor: pointer;
-    background: #fff;
+    background: var(--color-input-bg);
+    color: var(--color-text-body);
 }
 
 .shortcut-config input:focus {
-    outline: 2px solid #409eff;
-    border-color: #409eff;
+    outline: 2px solid var(--color-input-focus-outline);
+    border-color: var(--color-input-focus-border);
 }
 
 .shortcut-config-hint {
     font-size: 12px;
-    color: #666;
+    color: var(--color-shortcut-hint);
     line-height: 1.4;
 }
 
@@ -264,9 +615,9 @@ button:focus {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: #ffffff;
+    background: var(--color-image-list-header-bg);
     padding-bottom: 8px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--color-image-list-header-border);
 }
 
 #imageList {
@@ -275,8 +626,8 @@ button:focus {
 }
 
 .preview-wall-panel {
-    border-top: 1px solid #ddd;
-    background: #f8f8f8;
+    border-top: 1px solid var(--color-preview-separator);
+    background: var(--color-preview-panel-bg);
     padding: 10px;
     height: 260px;
     box-sizing: border-box;
@@ -306,8 +657,10 @@ button:focus {
 .preview-wall-controls input {
     width: 180px;
     padding: 6px 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-input-border);
     border-radius: 4px;
+    background: var(--color-input-bg);
+    color: var(--color-text-body);
 }
 
 .preview-wall-grid {
@@ -319,23 +672,23 @@ button:focus {
 }
 
 .preview-wall-item {
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--color-preview-item-bg);
+    border: 1px solid var(--color-preview-item-border);
     border-radius: 6px;
     padding: 5px;
     cursor: pointer;
 }
 
 .preview-wall-item.active {
-    border-color: #ff0000;
+    border-color: var(--color-active-indicator);
     box-shadow: 0 0 0 2px rgba(255,0,0,0.2);
 }
 
 .preview-wall-item canvas {
     width: 100%;
     height: 80px;
-    background: #eee;
-    border: 1px solid #ddd;
+    background: var(--color-thumbnail-bg);
+    border: 1px solid var(--color-thumbnail-border);
 }
 
 .preview-wall-name {
@@ -353,7 +706,7 @@ button:focus {
     height: calc(100vh - 60px);
     box-sizing: border-box;
     padding: 12px;
-    background: #f7f7f7;
+    background: var(--color-preview-wall-bg);
     display: flex;
     flex-direction: column;
 }
@@ -365,7 +718,7 @@ button:focus {
     gap: 12px;
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--color-preview-separator);
 }
 
 .preview-wall-topbar h2 {
@@ -382,40 +735,45 @@ button:focus {
 .preview-wall-controls input {
     width: 220px;
     padding: 6px 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-input-border);
     border-radius: 4px;
+    background: var(--color-input-bg);
+    color: var(--color-text-body);
 }
 
 .preview-wall-grid {
+    --zoom: 1;
     flex: 1;
     overflow-y: auto;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(calc(120px * var(--zoom) + 14px), 1fr));
     gap: 10px;
+    align-content: start;
 }
 
 .preview-wall-item {
-    background: #ffffff;
-    border: 1px solid #ddd;
+    background: var(--color-preview-item-bg);
+    border: 1px solid var(--color-preview-item-border);
     border-radius: 6px;
     padding: 6px;
     cursor: pointer;
 }
 
 .preview-wall-item:hover {
-    border-color: #409eff;
+    border-color: var(--color-preview-item-hover-border);
 }
 
 .preview-wall-item.active {
-    border-color: #ff0000;
+    border-color: var(--color-active-indicator);
     box-shadow: 0 0 0 2px rgba(255,0,0,0.25);
 }
 
 .preview-wall-item canvas {
     width: 100%;
-    height: 90px;
-    background: #eee;
-    border: 1px solid #ddd;
+    height: auto;
+    display: block;
+    background: var(--color-thumbnail-bg);
+    border: 1px solid var(--color-thumbnail-border);
 }
 
 .preview-wall-name {
@@ -426,21 +784,47 @@ button:focus {
 }
 
 .preview-wall-empty {
-    color: #666;
+    color: var(--color-preview-empty-text);
     font-size: 14px;
     padding: 20px;
 }
 
+.preview-wall-zoom-slider {
+    width: 100px;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.preview-wall-zoom-label {
+    font-size: 13px;
+    min-width: 42px;
+    text-align: center;
+    display: inline-block;
+}
+
+.preview-wall-sentinel {
+    height: 1px;
+    grid-column: 1 / -1;
+}
+
+.preview-wall-loading {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 20px;
+    color: var(--color-preview-loading-text);
+    font-size: 14px;
+}
+
 .box-list-item {
     padding: 6px 8px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--color-box-list-border);
     cursor: pointer;
     font-size: 13px;
 }
 
 .box-list-item.active {
-    background: #ffecec;
-    border-left: 4px solid #ff0000;
+    background: var(--color-box-list-active-bg);
+    border-left: 4px solid var(--color-active-indicator);
 }
 
 .box-list-title {
@@ -452,7 +836,7 @@ button:focus {
 }
 
 .box-list-coord {
-    color: #555;
+    color: var(--color-text-coord);
     font-family: Consolas, monospace;
     font-size: 12px;
 }
@@ -470,6 +854,28 @@ button:focus {
 }
 
 .image-item.active {
-    background: #ffecec;
-    border-left: 4px solid #ff0000;
+    background: var(--color-image-item-active-bg);
+    border-left: 4px solid var(--color-active-indicator);
+}
+
+/* ===== 自定义滚动条 ===== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--color-scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--color-scrollbar-thumb);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-scrollbar-thumb-hover);
+}
+
+/* Firefox 滚动条 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
 }
