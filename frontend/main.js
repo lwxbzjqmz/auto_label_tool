@@ -726,9 +726,13 @@ function loadNextPreviewWallBatch() {
         return;
     }
 
+    if (previewWallObserver && previewWallSentinel) {
+        previewWallObserver.unobserve(previewWallSentinel);
+    }
     if (previewWallSentinel && previewWallSentinel.parentNode) {
         previewWallSentinel.remove();
     }
+    previewWallSentinel = null;
 
     for (const imageName of batch) {
         const item = createPreviewWallItem(imageName);
@@ -739,9 +743,7 @@ function loadNextPreviewWallBatch() {
 
     previewWallLoadedCount = endIndex;
 
-    if (!previewWallSentinel) {
-        previewWallSentinel = createPreviewWallSentinel();
-    }
+    previewWallSentinel = createPreviewWallSentinel();
     previewWallGrid.appendChild(previewWallSentinel);
 
     if (previewWallObserver) {
@@ -755,7 +757,7 @@ function setupPreviewWallObserver() {
     }
 
     previewWallObserver = new IntersectionObserver((entries) => {
-        if (entries[0] && entries[0].isIntersecting) {
+        if (entries.some(e => e.isIntersecting)) {
             loadNextPreviewWallBatch();
         }
     }, {
@@ -1890,24 +1892,6 @@ document.addEventListener("keydown", async (event) => {
         return;
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.previousImage)) {
-        event.preventDefault();
-        selectPreviousImage();
-        return;
-    }
-
-    if (eventMatchesShortcut(event, shortcutConfig.nextImage)) {
-        event.preventDefault();
-        selectNextImage();
-        return;
-    }
-
-    if (eventMatchesShortcut(event, shortcutConfig.saveXml)) {
-        event.preventDefault();
-        await saveXml();
-        return;
-    }
-
     if (eventMatchesShortcut(event, shortcutConfig.savePreviousImage)) {
         event.preventDefault();
         await saveAndSelectPreviousImage();
@@ -1917,6 +1901,24 @@ document.addEventListener("keydown", async (event) => {
     if (eventMatchesShortcut(event, shortcutConfig.saveNextImage)) {
         event.preventDefault();
         await saveAndSelectNextImage();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.saveXml)) {
+        event.preventDefault();
+        await saveXml();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.previousImage)) {
+        event.preventDefault();
+        selectPreviousImage();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, shortcutConfig.nextImage)) {
+        event.preventDefault();
+        selectNextImage();
         return;
     }
 

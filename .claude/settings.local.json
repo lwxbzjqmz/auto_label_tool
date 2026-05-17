@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :5051)",
+      "Bash(findstr :5000)",
+      "Bash(tasklist)",
+      "Bash(findstr python *)"
     ]
   }
 }

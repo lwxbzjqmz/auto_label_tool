@@ -22,3 +22,7 @@ tmp/
 temp/
 
 rubbish/
+
+batch_runner_and_save.py
+
+.claude/
