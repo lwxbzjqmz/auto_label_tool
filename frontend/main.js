@@ -15,6 +15,7 @@ const yoloModelDropdownBtn = document.getElementById("yoloModelDropdownBtn");
 const yoloModelDropdown = document.getElementById("yoloModelDropdown");
 const groundingDinoDetectBtn = document.getElementById("groundingDinoDetectBtn");
 let currentYoloModelId = null;
+let yoloModelCount = 0;
 const imageSearchInput = document.getElementById("imageSearchInput");
 const rejectImageBtn = document.getElementById("rejectImageBtn");
 
@@ -547,6 +548,7 @@ async function loadYoloModels() {
         }
 
         yoloModelDropdown.innerHTML = "";
+        yoloModelCount = data.models.length;
 
         if (data.default_model !== undefined && data.default_model !== null) {
             currentYoloModelId = String(data.default_model);
@@ -556,7 +558,10 @@ async function loadYoloModels() {
 
         for (const model of data.models) {
             const li = document.createElement("li");
-            li.textContent = model.name;
+            const shortcutHint = yoloModelCount <= 9
+                ? ` (Ctrl+${model.id})`
+                : "";
+            li.textContent = model.name + shortcutHint;
             li.dataset.modelId = model.id;
 
             if (String(model.id) === currentYoloModelId) {
@@ -577,6 +582,12 @@ async function loadYoloModels() {
             });
 
             yoloModelDropdown.appendChild(li);
+        }
+
+        if (yoloModelCount > 1) {
+            statusTextEl.textContent = `状态：已加载 ${yoloModelCount} 个 YOLO 模型，Ctrl+1~Ctrl+${yoloModelCount} 快捷切换`;
+        } else {
+            statusTextEl.textContent = "状态：YOLO 模型列表加载完成";
         }
     } catch (error) {
         console.error(error);
@@ -1926,6 +1937,15 @@ document.addEventListener("keydown", async (event) => {
         event.preventDefault();
         autoDetect("yolo", currentYoloModelId);
         return;
+    }
+
+    if (event.ctrlKey && !event.altKey && !event.metaKey && yoloModelCount > 0) {
+        const digit = parseInt(event.key, 10);
+        if (digit >= 1 && digit <= yoloModelCount) {
+            event.preventDefault();
+            autoDetect("yolo", String(digit));
+            return;
+        }
     }
 
     if (eventMatchesShortcut(event, shortcutConfig.groundingDinoDetect)) {

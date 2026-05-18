@@ -37,7 +37,7 @@ YOLOV3_MBV2_ANCHORS_FILENAME="yolo3_anchors.txt"
 YOLOV3_MBV2_PC_MODEL_PATH=(YOLOV3_MBV2_MODEL_ROOT
                            /str(MODEL_SELECT)
                            /YOLOV3_MBV2_MODEL_FILENAME)
-#模型有两个，一个用于PC端，一个部署于openmv
+#模型目录，每个子目录代表一个模型变体
 
 YOLOV3_MBV2_ANCHORS_PATH=(YOLOV3_MBV2_MODEL_ROOT
                            /str(MODEL_SELECT)

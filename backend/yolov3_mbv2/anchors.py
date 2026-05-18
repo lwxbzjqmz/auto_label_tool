@@ -12,7 +12,7 @@ def load_anchors(model_select=None):
     
     if not anchors_path.exists():
         raise FileNotFoundError(
-            f"YOLOv3-mbv2 anchors not found: {anchors_path}"
+            f"YOLOv3-mbv2 anchors not found for model {model_select or 'default'}: {anchors_path}"
         )
     
     text=anchors_path.read_text(encoding="utf-8").strip()

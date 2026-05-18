@@ -6,7 +6,12 @@
       "Bash(findstr :5051)",
       "Bash(findstr :5000)",
       "Bash(tasklist)",
-      "Bash(findstr python *)"
+      "Bash(findstr python *)",
+      "Bash(curl -s http://127.0.0.1:5000/api/yolo_models)",
+      "Bash(taskkill //PID 16436 //F)",
+      "Bash(conda activate *)",
+      "Bash(python backend/app.py)",
+      "Bash(W:/anaconda3/envs/autolabel/python.exe *)"
     ]
   }
 }
