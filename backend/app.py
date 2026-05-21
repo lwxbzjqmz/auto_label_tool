@@ -156,6 +156,22 @@ def api_annontation(image_name):
         "result":result
     })
 
+@app.route("/api/annotations/status")
+def api_annotations_status():
+    """Return image names that have corresponding XML annotation files."""
+    annotated = []
+    if ANNOTATION_DIR.exists():
+        for entry in ANNOTATION_DIR.iterdir():
+            if entry.is_file() and entry.suffix.lower() == ".xml":
+                jpg_name = entry.with_suffix(".jpg").name
+                annotated.append(jpg_name)
+    annotated.sort()
+    return jsonify({
+        "success": True,
+        "annotated": annotated,
+        "count": len(annotated)
+    })
+
 @app.route("/api/detect",methods=["POST"])
 def api_detect():
     '''自动标注接口'''

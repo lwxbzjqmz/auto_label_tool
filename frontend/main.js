@@ -30,6 +30,9 @@ const deleteBoxBtn = document.getElementById("deleteBoxBtn");
 const clearBoxesBtn = document.getElementById("clearBoxesBtn");
 const backupAnnotationsBtn = document.getElementById("backupAnnotationsBtn");
 
+const jumpToImageInput = document.getElementById("jumpToImageInput");
+const positionProgressEl = document.getElementById("positionProgress");
+
 const openPreviewWallBtn = document.getElementById("openPreviewWallBtn");
 const backToLabelViewBtn = document.getElementById("backToLabelViewBtn");
 
@@ -62,6 +65,8 @@ let filteredImages = [];
 let currentImageName = null;
 let currentImage = null;
 
+let annotatedCache = new Set();
+
 let boxes = [];
 let boxInfos = [];
 let selectedBoxIndex = -1;
@@ -80,6 +85,7 @@ const canvasColors = {
     thumbnailBg: "#eeeeee",
     thumbnailErrorText: "#999999",
     previewBoxStroke: "#00ff00",
+    annotatedDot: "#22cc22",
 };
 
 function updateCanvasColors() {
@@ -92,6 +98,7 @@ function updateCanvasColors() {
         canvasColors.thumbnailBg = "#333333";
         canvasColors.thumbnailErrorText = "#888888";
         canvasColors.previewBoxStroke = "#44ff44";
+        canvasColors.annotatedDot = "#33dd33";
     } else {
         canvasColors.emptyHint = "#777777";
         canvasColors.selectedBox = "#ff0000";
@@ -101,6 +108,7 @@ function updateCanvasColors() {
         canvasColors.thumbnailBg = "#eeeeee";
         canvasColors.thumbnailErrorText = "#999999";
         canvasColors.previewBoxStroke = "#00ff00";
+        canvasColors.annotatedDot = "#22cc22";
     }
 }
 
@@ -166,6 +174,13 @@ function initGroundingDinoInputs() {
     groundingTextThresholdInput.value = String(groundingDinoDefaultConfig.textThreshold);
     groundingUseNmsInput.checked = groundingDinoDefaultConfig.useNms;
     groundingNmsIouInput.value = String(groundingDinoDefaultConfig.nmsIouThreshold);
+
+    groundingBoxThresholdInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") e.target.blur();
+    });
+    groundingTextThresholdInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") e.target.blur();
+    });
 }
 
 async function fetchGroundingDinoDefaults() {
@@ -499,6 +514,10 @@ function showPreviewWallView() {
     }
     updatePreviewWallZoom(previewWallZoom);
     renderPreviewWall();
+
+    if (currentImageName) {
+        scrollPreviewWallToImage(currentImageName);
+    }
 }
 
 
@@ -551,6 +570,26 @@ async function loadImageList() {
         }
 
         statusTextEl.textContent = "状态：图片列表加载完成";
+
+        fetch("/api/annotations/status")
+            .then(res => res.json())
+            .then(ad => {
+                if (ad.success) {
+                    annotatedCache = new Set(ad.annotated);
+                    renderImageList();
+                    if (isPreviewWallVisible()) {
+                        renderPreviewWall();
+                    }
+                }
+            })
+            .catch(err => console.error("Failed to load annotation status:", err));
+
+        const lastImageName = localStorage.getItem("lastImageName");
+        if (lastImageName && allImages.includes(lastImageName)) {
+            selectImage(lastImageName);
+        } else if (allImages.length > 0) {
+            selectImage(allImages[0]);
+        }
     } catch (error) {
         console.error(error);
         statusTextEl.textContent = "状态：无法连接后端";
@@ -664,6 +703,10 @@ function renderImageList() {
             li.classList.add("active");
         }
 
+        if (annotatedCache.has(imageName)) {
+            li.classList.add("annotated");
+        }
+
         const previewCanvas = document.createElement("canvas");
         previewCanvas.classList.add("thumbnail-canvas");
         previewCanvas.width = 96;
@@ -714,6 +757,10 @@ function createPreviewWallItem(imageName) {
 
     if (imageName === currentImageName) {
         item.classList.add("active");
+    }
+
+    if (annotatedCache.has(imageName)) {
+        item.classList.add("annotated");
     }
 
     const dims = getPreviewCanvasDims(previewWallZoom);
@@ -862,6 +909,55 @@ function renderPreviewWall() {
     loadNextPreviewWallBatch();
 }
 
+function scrollPreviewWallToImage(imageName) {
+    const targetIndex = previewWallFiltered.indexOf(imageName);
+    if (targetIndex === -1) return;
+
+    if (previewWallObserver) {
+        previewWallObserver.disconnect();
+        previewWallObserver = null;
+    }
+
+    if (previewWallSentinel && previewWallSentinel.parentNode) {
+        previewWallSentinel.remove();
+    }
+    previewWallSentinel = null;
+
+    while (previewWallLoadedCount <= targetIndex) {
+        const startIndex = previewWallLoadedCount;
+        const endIndex = Math.min(
+            startIndex + PREVIEW_WALL_BATCH_SIZE,
+            previewWallFiltered.length
+        );
+        const batch = previewWallFiltered.slice(startIndex, endIndex);
+
+        for (const imgName of batch) {
+            const item = createPreviewWallItem(imgName);
+            previewWallGrid.appendChild(item);
+            const canvas = item.querySelector("canvas");
+            drawThumbnail(imgName, canvas);
+        }
+
+        previewWallLoadedCount = endIndex;
+
+        if (previewWallLoadedCount >= previewWallFiltered.length) break;
+    }
+
+    previewWallSentinel = createPreviewWallSentinel();
+    previewWallGrid.appendChild(previewWallSentinel);
+    setupPreviewWallObserver();
+
+    requestAnimationFrame(() => {
+        const items = previewWallGrid.querySelectorAll(".preview-wall-item");
+        for (const item of items) {
+            if (item.dataset.imageName === imageName) {
+                item.scrollIntoView({ block: "center", behavior: "smooth" });
+                break;
+            }
+        }
+    });
+}
+
 
 async function drawThumbnail(imageName, previewCanvas) {
     const previewCtx = previewCanvas.getContext("2d");
@@ -896,35 +992,12 @@ async function drawThumbnail(imageName, previewCanvas) {
             drawH
         );
 
-        try {
-            const response = await fetch(`/api/annotation/${encodeURIComponent(imageName)}`);
-            const data = await response.json();
-
-            if (!data.success) {
-                return;
-            }
-
-            const result = data.result;
-            const previewBoxes = result.boxes || [];
-
-            previewCtx.lineWidth = 1;
-            previewCtx.strokeStyle = canvasColors.previewBoxStroke;
-
-            for (const box of previewBoxes) {
-                const x1 = offsetX + box[0] * scale;
-                const y1 = offsetY + box[1] * scale;
-                const x2 = offsetX + box[2] * scale;
-                const y2 = offsetY + box[3] * scale;
-
-                previewCtx.strokeRect(
-                    x1,
-                    y1,
-                    x2 - x1,
-                    y2 - y1
-                );
-            }
-        } catch (error) {
-            console.error("缩略图标注读取失败：", imageName, error);
+        if (annotatedCache.has(imageName)) {
+            const dotR = Math.max(3, previewCanvas.width * 0.04);
+            previewCtx.fillStyle = canvasColors.annotatedDot;
+            previewCtx.beginPath();
+            previewCtx.arc(previewCanvas.width - dotR - 2, dotR + 2, dotR, 0, Math.PI * 2);
+            previewCtx.fill();
         }
     };
 
@@ -997,6 +1070,15 @@ function selectImage(imageName) {
     boxInfos = [];
     selectedBoxIndex = -1;
 
+    try {
+        localStorage.setItem("lastImageName", imageName);
+    } catch (e) {}
+
+    updatePositionProgress(imageName);
+    if (jumpToImageInput) {
+        jumpToImageInput.value = imageName;
+    }
+
     document.querySelectorAll("#imageList li").forEach(li => {
         li.classList.remove("active");
     });
@@ -1029,6 +1111,17 @@ function selectImage(imageName) {
     };
 
     currentImage.src = `/api/image/${encodeURIComponent(imageName)}`;
+}
+
+function updatePositionProgress(imageName) {
+    if (!positionProgressEl) return;
+    const total = allImages.length;
+    if (total === 0) {
+        positionProgressEl.textContent = "- / -";
+        return;
+    }
+    const index = allImages.indexOf(imageName);
+    positionProgressEl.textContent = (index >= 0 ? index + 1 : "?") + " / " + total;
 }
 
 
@@ -1395,6 +1488,7 @@ async function saveXml() {
         const result = data.result;
         statusTextEl.textContent = `状态：保存成功，${result.xml_name}，框数量 ${result.box_count}`;
 
+        annotatedCache.add(currentImageName);
         refreshThumbnail(currentImageName);
 
         return true;
@@ -1444,6 +1538,7 @@ async function rejectCurrentImage() {
 
         allImages = allImages.filter(name => name !== imageNameToReject);
         filteredImages = filteredImages.filter(name => name !== imageNameToReject);
+        annotatedCache.delete(imageNameToReject);
 
         boxes = [];
         boxInfos = [];
@@ -1467,6 +1562,12 @@ async function rejectCurrentImage() {
             selectImage(filteredImages[nextIndex]);
         } else {
             currentImageNameEl.textContent = "当前图片：无";
+            if (jumpToImageInput) {
+                jumpToImageInput.value = "";
+            }
+            if (positionProgressEl) {
+                positionProgressEl.textContent = "- / -";
+            }
         }
 
         if (typeof renderPreviewWall === "function" && isPreviewWallVisible()) {
@@ -1820,6 +1921,20 @@ if (resetShortcutConfigBtn) {
 
 if (rejectImageBtn) {
     rejectImageBtn.addEventListener("click", rejectCurrentImage);
+}
+
+if (jumpToImageInput) {
+    jumpToImageInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            const targetName = jumpToImageInput.value.trim();
+            if (targetName && allImages.includes(targetName)) {
+                selectImage(targetName);
+            } else {
+                statusTextEl.textContent = "状态：图片 " + targetName + " 不存在";
+            }
+        }
+    });
 }
 
 yoloDetectBtn.addEventListener("click", () => {
