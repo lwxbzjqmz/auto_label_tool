@@ -77,9 +77,9 @@ GROUNDING_DINO_HF_HOME=r"C:\Users\lwx\.cache\huggingface"
 
 GROUNDING_DINO_LOCAL_FILES_ONLY=True
 
-GROUNDING_DINO_DEFAULT_PROMPT="tennis ball. blue bean bag. red bean bag. white teddy bear. brown teddy bear"
+GROUNDING_DINO_DEFAULT_PROMPT="tennis ball . light blue sandbag . red sandbag . white teddy bear . brown teddy bear"
 
-GROUNDING_DINO_BOX_THRESHOLD=0.18
+GROUNDING_DINO_BOX_THRESHOLD=0.25
 
 GROUNDING_DINO_TEXT_THRESHOLD=0.20
 

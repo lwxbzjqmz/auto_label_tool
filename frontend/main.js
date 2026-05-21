@@ -130,6 +130,7 @@ let imageView = {
 };
 
 const groundingDinoDefaultConfig = {
+    prompt: "tennis ball. blue bean bag. red bean bag. white teddy bear. brown teddy bear",
     boxThreshold: 0.18,
     textThreshold: 0.20,
     useNms: true,
@@ -160,10 +161,30 @@ function initGroundingDinoInputs() {
         return;
     }
 
+    groundingPromptInput.value = groundingDinoDefaultConfig.prompt;
     groundingBoxThresholdInput.value = String(groundingDinoDefaultConfig.boxThreshold);
     groundingTextThresholdInput.value = String(groundingDinoDefaultConfig.textThreshold);
     groundingUseNmsInput.checked = groundingDinoDefaultConfig.useNms;
     groundingNmsIouInput.value = String(groundingDinoDefaultConfig.nmsIouThreshold);
+}
+
+async function fetchGroundingDinoDefaults() {
+    try {
+        const response = await fetch("/api/grounding_dino_defaults");
+        const data = await response.json();
+
+        if (data.success && data.defaults) {
+            groundingDinoDefaultConfig.prompt = data.defaults.prompt || groundingDinoDefaultConfig.prompt;
+            groundingDinoDefaultConfig.boxThreshold = data.defaults.box_threshold ?? groundingDinoDefaultConfig.boxThreshold;
+            groundingDinoDefaultConfig.textThreshold = data.defaults.text_threshold ?? groundingDinoDefaultConfig.textThreshold;
+            groundingDinoDefaultConfig.useNms = data.defaults.use_nms ?? groundingDinoDefaultConfig.useNms;
+            groundingDinoDefaultConfig.nmsIouThreshold = data.defaults.nms_iou_threshold ?? groundingDinoDefaultConfig.nmsIouThreshold;
+
+            initGroundingDinoInputs();
+        }
+    } catch (error) {
+        console.warn("无法从后端获取 Grounding DINO 默认配置，使用内置默认值", error);
+    }
 }
 
 
@@ -1998,6 +2019,7 @@ updateCanvasColors();
 resizeCanvasToDisplaySize();
 redrawCanvas();
 initGroundingDinoInputs();
+fetchGroundingDinoDefaults();
 fillShortcutConfigInputs();
 bindShortcutInputCapture();
 loadYoloModels();

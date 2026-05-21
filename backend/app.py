@@ -255,6 +255,27 @@ def api_detectors():
         ]
     })
 
+@app.route("/api/grounding_dino_defaults")
+def api_grounding_dino_defaults():
+    """返回 Grounding DINO 默认配置"""
+    from config import (
+        GROUNDING_DINO_DEFAULT_PROMPT,
+        GROUNDING_DINO_BOX_THRESHOLD,
+        GROUNDING_DINO_TEXT_THRESHOLD,
+        GROUNDING_DINO_USE_NMS,
+        GROUNDING_DINO_NMS_IOU_THRESHOLD,
+    )
+    return jsonify({
+        "success": True,
+        "defaults": {
+            "prompt": GROUNDING_DINO_DEFAULT_PROMPT,
+            "box_threshold": GROUNDING_DINO_BOX_THRESHOLD,
+            "text_threshold": GROUNDING_DINO_TEXT_THRESHOLD,
+            "use_nms": GROUNDING_DINO_USE_NMS,
+            "nms_iou_threshold": GROUNDING_DINO_NMS_IOU_THRESHOLD,
+        }
+    })
+
 @app.route("/api/backup_annotations")
 def api_backup_annotations():
     '''备份Annotations目录'''
