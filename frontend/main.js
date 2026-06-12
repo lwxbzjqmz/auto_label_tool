@@ -60,12 +60,11 @@ const resetShortcutConfigBtn = document.getElementById("resetShortcutConfigBtn")
 const shortcutRejectImageInput = document.getElementById("shortcutRejectImageInput");
 
 let allImages = [];
+let allAnnotations = {};
 let filteredImages = [];
 
 let currentImageName = null;
 let currentImage = null;
-
-let annotatedCache = new Set();
 
 let boxes = [];
 let boxInfos = [];
@@ -85,7 +84,6 @@ const canvasColors = {
     thumbnailBg: "#eeeeee",
     thumbnailErrorText: "#999999",
     previewBoxStroke: "#00ff00",
-    annotatedDot: "#22cc22",
 };
 
 function updateCanvasColors() {
@@ -98,7 +96,6 @@ function updateCanvasColors() {
         canvasColors.thumbnailBg = "#333333";
         canvasColors.thumbnailErrorText = "#888888";
         canvasColors.previewBoxStroke = "#44ff44";
-        canvasColors.annotatedDot = "#33dd33";
     } else {
         canvasColors.emptyHint = "#777777";
         canvasColors.selectedBox = "#ff0000";
@@ -108,7 +105,6 @@ function updateCanvasColors() {
         canvasColors.thumbnailBg = "#eeeeee";
         canvasColors.thumbnailErrorText = "#999999";
         canvasColors.previewBoxStroke = "#00ff00";
-        canvasColors.annotatedDot = "#22cc22";
     }
 }
 
@@ -562,7 +558,16 @@ async function loadImageList() {
             return;
         }
 
-        allImages = data.images || [];
+        const rawImages = data.images || [];
+        allAnnotations = {};
+        allImages = rawImages.map(item => {
+            if (typeof item === "string") {
+                allAnnotations[item] = { boxes: [] };
+                return item;
+            }
+            allAnnotations[item.name] = { boxes: item.boxes || [] };
+            return item.name;
+        });
         renderImageList();
 
         if (isPreviewWallVisible()) {
@@ -570,19 +575,6 @@ async function loadImageList() {
         }
 
         statusTextEl.textContent = "状态：图片列表加载完成";
-
-        fetch("/api/annotations/status")
-            .then(res => res.json())
-            .then(ad => {
-                if (ad.success) {
-                    annotatedCache = new Set(ad.annotated);
-                    renderImageList();
-                    if (isPreviewWallVisible()) {
-                        renderPreviewWall();
-                    }
-                }
-            })
-            .catch(err => console.error("Failed to load annotation status:", err));
 
         const lastImageName = localStorage.getItem("lastImageName");
         if (lastImageName && allImages.includes(lastImageName)) {
@@ -703,10 +695,6 @@ function renderImageList() {
             li.classList.add("active");
         }
 
-        if (annotatedCache.has(imageName)) {
-            li.classList.add("annotated");
-        }
-
         const previewCanvas = document.createElement("canvas");
         previewCanvas.classList.add("thumbnail-canvas");
         previewCanvas.width = 96;
@@ -757,10 +745,6 @@ function createPreviewWallItem(imageName) {
 
     if (imageName === currentImageName) {
         item.classList.add("active");
-    }
-
-    if (annotatedCache.has(imageName)) {
-        item.classList.add("annotated");
     }
 
     const dims = getPreviewCanvasDims(previewWallZoom);
@@ -992,12 +976,18 @@ async function drawThumbnail(imageName, previewCanvas) {
             drawH
         );
 
-        if (annotatedCache.has(imageName)) {
-            const dotR = Math.max(3, previewCanvas.width * 0.04);
-            previewCtx.fillStyle = canvasColors.annotatedDot;
-            previewCtx.beginPath();
-            previewCtx.arc(previewCanvas.width - dotR - 2, dotR + 2, dotR, 0, Math.PI * 2);
-            previewCtx.fill();
+        const annot = allAnnotations[imageName];
+        const boxes = annot ? annot.boxes : null;
+        if (boxes && boxes.length > 0) {
+            previewCtx.strokeStyle = canvasColors.previewBoxStroke;
+            previewCtx.lineWidth = 1;
+            for (const box of boxes) {
+                const bx = offsetX + box[0] * scale;
+                const by = offsetY + box[1] * scale;
+                const bw = (box[2] - box[0]) * scale;
+                const bh = (box[3] - box[1]) * scale;
+                previewCtx.strokeRect(bx, by, bw, bh);
+            }
         }
     };
 
@@ -1488,7 +1478,8 @@ async function saveXml() {
         const result = data.result;
         statusTextEl.textContent = `状态：保存成功，${result.xml_name}，框数量 ${result.box_count}`;
 
-        annotatedCache.add(currentImageName);
+        allAnnotations[currentImageName] = { boxes: boxes.slice() };
+
         refreshThumbnail(currentImageName);
 
         return true;
@@ -1538,7 +1529,7 @@ async function rejectCurrentImage() {
 
         allImages = allImages.filter(name => name !== imageNameToReject);
         filteredImages = filteredImages.filter(name => name !== imageNameToReject);
-        annotatedCache.delete(imageNameToReject);
+        delete allAnnotations[imageNameToReject];
 
         boxes = [];
         boxInfos = [];

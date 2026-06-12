@@ -74,7 +74,6 @@
     --color-box-list-active-bg: #ffecec;
     --color-image-item-active-bg: #ffecec;
     --color-active-indicator: #ff0000;
-    --color-annotated-indicator: #22cc22;
     --color-box-list-border: #dddddd;
 
     /* Image list header */
@@ -182,7 +181,6 @@
         --color-box-list-active-bg: #3a1818;
         --color-image-item-active-bg: #3a1818;
         --color-active-indicator: #ff4444;
-        --color-annotated-indicator: #33dd33;
         --color-box-list-border: #3a3a3a;
 
         /* Image list header */
@@ -770,15 +768,6 @@ button:focus {
     box-shadow: 0 0 0 2px rgba(255,0,0,0.25);
 }
 
-.preview-wall-item.annotated {
-    border-color: var(--color-annotated-indicator);
-    box-shadow: 0 0 0 1px rgba(0,255,0,0.15);
-}
-
-.preview-wall-item.annotated.active {
-    border-color: var(--color-active-indicator);
-    box-shadow: 0 0 0 2px rgba(255,0,0,0.25);
-}
 
 .preview-wall-item canvas {
     width: 100%;
@@ -870,13 +859,6 @@ button:focus {
     border-left: 4px solid var(--color-active-indicator);
 }
 
-.image-item.annotated {
-    border-left: 4px solid var(--color-annotated-indicator);
-}
-
-.image-item.annotated.active {
-    border-left: 4px solid var(--color-active-indicator);
-}
 
 /* ===== 自定义滚动条 ===== */
 ::-webkit-scrollbar {

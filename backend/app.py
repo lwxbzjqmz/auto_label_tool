@@ -24,8 +24,16 @@ def frontend_files(filename):
 
 @app.route("/api/images")
 def api_images():
-    '''返回图片列表'''
-    images=list_images()
+    '''返回图片列表,包含标注框信息'''
+    image_names=list_images()
+    images=[]
+    for name in image_names:
+        annotation=read_voc_xml(name)
+        images.append({
+            "name":name,
+            "has_annotation":annotation["exists"],
+            "boxes":annotation["boxes"]
+        })
     return jsonify({
         "success" : True,
         "images" : images,
@@ -154,22 +162,6 @@ def api_annontation(image_name):
     return jsonify({
         "success":True,
         "result":result
-    })
-
-@app.route("/api/annotations/status")
-def api_annotations_status():
-    """Return image names that have corresponding XML annotation files."""
-    annotated = []
-    if ANNOTATION_DIR.exists():
-        for entry in ANNOTATION_DIR.iterdir():
-            if entry.is_file() and entry.suffix.lower() == ".xml":
-                jpg_name = entry.with_suffix(".jpg").name
-                annotated.append(jpg_name)
-    annotated.sort()
-    return jsonify({
-        "success": True,
-        "annotated": annotated,
-        "count": len(annotated)
     })
 
 @app.route("/api/detect",methods=["POST"])
