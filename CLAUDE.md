@@ -93,3 +93,37 @@ models/
 ### YOLO preprocessing details
 
 The YOLOv3-mbv2 model was trained with a specific crop: the original 320×240 image is cropped to region (40, 0) to (280, 240), then resized to 144×144 for model input. After inference, box coordinates are scaled back to the original 320×240 image space. **Do not change these crop/resize parameters** (`YOLOV3_MBV2_CROP_*`, `YOLOV3_MBV2_MODEL_INPUT_*`, `YOLOV3_MBV2_ORIGINAL_IMAGE_*`) without retraining the model.
+
+## Development workflow
+
+- Work from the repository root. The backend uses repository-relative paths, so starting `backend/app.py` from another directory can select the wrong data or model paths.
+- On Windows, activate the `autolabel` environment and run `python backend/app.py`. Keep the terminal running while using the browser UI.
+- The Flask process may start the Grounding DINO worker on port 5051. Before debugging detector failures, check both `/api/health` and `http://127.0.0.1:5051/health`.
+- `backend/run.ps1` and `experiments/start_grounding_dino.ps1` are helper scripts only. Inspect their paths before using them on a different machine.
+
+## Configuration rules
+
+- Machine-specific values belong in `backend/config.py` or local environment configuration. Do not commit personal Conda paths, model cache paths, or absolute dataset paths.
+- Keep the `autolabel` and `grounding_dino` environments separate. Changes to one environment must not assume that packages are installed in the other.
+- Treat `data/` and `models/` as local assets. They are ignored by Git and must not be removed, reformatted, or regenerated as part of an ordinary code change.
+- When adding a detector, preserve the common detector result shape: `{boxes, objects}`. Update backend dispatch, `/api/detectors`, frontend controls, and documentation together.
+
+## Change guidelines
+
+- Preserve existing Flask API routes and response fields unless the change explicitly requires an API change. Check both success and error responses when modifying a route.
+- Keep image-space boxes consistent with the 320x240 source image and verify coordinate conversion at the frontend canvas boundary.
+- Annotation changes must preserve valid Pascal VOC XML and must not overwrite unrelated annotations. Use the existing XML reader/writer and manager modules.
+- Keep frontend changes in the existing vanilla HTML/CSS/JavaScript structure. Do not introduce a framework or build step without updating the workflow and documentation.
+- Avoid broad cleanup of generated files, datasets, model files, or unrelated user changes. Make focused edits that are easy to review.
+
+## Verification checklist
+
+There is currently no automated test, lint, or build command. After backend changes, perform the smallest relevant manual checks:
+
+1. Start the server and request `/api/health`.
+2. Request `/api/images` and open one image in the UI.
+3. Run the affected detector and check that boxes and labels render in the expected image coordinates.
+4. Save one annotation, reload it through `/api/annotation/<name>`, and verify the XML under `data/Annotations/`.
+5. For rejection or backup changes, verify the resulting files in their destination directories.
+
+For frontend-only changes, reload the page and exercise image selection, box creation, box editing/deletion, detector invocation, and save. A successful Flask start alone is not sufficient validation of the browser workflow.

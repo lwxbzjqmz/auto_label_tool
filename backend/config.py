@@ -73,9 +73,9 @@ GROUNDING_DINO_WORKER_URL=f"http://{GROUNDING_DINO_WORKER_HOST}:{GROUNDING_DINO_
 
 GROUNDING_DINO_MODEL_ID="IDEA-Research/grounding-dino-base"
 
-GROUNDING_DINO_HF_HOME=r"C:\Users\lwx\.cache\huggingface"
+GROUNDING_DINO_HF_HOME=r"C:\Users\ASUS\.cache\huggingface"
 
-GROUNDING_DINO_LOCAL_FILES_ONLY=True
+GROUNDING_DINO_LOCAL_FILES_ONLY=True   # False=首次联网下载模型；下载完成缓存后可视需要改回 True 以跳过联网检查
 
 GROUNDING_DINO_DEFAULT_PROMPT="tennis ball . light blue sandbag . red sandbag . white teddy bear . brown teddy bear"
 
@@ -92,7 +92,7 @@ GROUNDING_DINO_NMS_IOU_THRESHOLD=0.20
 #=====Grounding DINO worker进程配置========
 GROUNDING_DINO_AUTO_START=True
 
-GROUNDING_DINO_PYTHON_PATH=r"W:\anaconda3\envs\grounding_dino\python.exe"
+GROUNDING_DINO_PYTHON_PATH=r"C:\Users\ASUS\miniconda3\envs\grounding_dino\python.exe"
 
 GROUNDING_DINO_WORKER_SCRIPT=BASE_DIR/"backend"/"grounding_dino/worker.py"
 

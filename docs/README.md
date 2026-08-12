@@ -126,69 +126,67 @@
 
 - 笔者为笔记本独显 RTX 5060 Laptop GPU，模型加载的缓存为6.2G  
 
-2. **anaconda的库管理**
+2. **conda 环境**：本项目需要两个独立环境（autolabel / grounding_dino），直接用项目根目录的 yaml 文件创建（也可复制下方 yaml 内容保存为文件后使用）：
 
-- autolabel
+```powershell
+conda env create -f environment_autolabel.yml
+conda env create -f environment_grounding_dino.yml
+```
 
-    | 库名称 | 版本 |
-    | :---: | :---: |
-    | Python | 3.10 |
-    | Flask | 3.1.3 |
-    | TensorFlow | 2.21.0 |
-    | NumPy | 2.2.6 |
-    | Pillow | 12.2.0 |
-    | OpenCV-Python | 4.13.0.92 |
-    | Requests | 2.33.1 |
+- **autolabel**（后端 Flask + yolo 推理）：[environment_autolabel.yml](../environment_autolabel.yml)
 
-    ```powershell
-       conda create -n autolabel python=3.10 -y
-       conda activate autolabel
-       pip install flask==3.1.3 tensorflow==2.21.0 numpy==2.2.6 pillow==12.2.0 opencv-python==4.13.0.92 requests==2.33.1 
-    ```
+```yaml
+name: autolabel
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip:
+      - flask==3.1.3
+      - tensorflow==2.21.0
+      - numpy==2.2.6
+      - pillow==12.2.0
+      - opencv-python==4.13.0.92
+      - requests==2.33.1
+```
 
-- grounding_dino  
+- **grounding_dino**（grounding-dino 模型）：[environment_grounding_dino.yml](../environment_grounding_dino.yml)；torch 系列通过 `--extra-index-url` 从 PyTorch cu128 源安装，其余包走默认 PyPI
 
-    | 库名称 | 版本 |
-    | :---: | :---: |
-    | Python | 3.10 |
-    | PyTorch | 2.11.0+cu128 |
-    | TorchVision | 0.26.0+cu128 |
-    | TorchAudio | 2.11.0+cu128 |
-    | Transformers | 5.7.0 |
-    | Accelerate | 1.13.0 |
-    | HuggingFace Hub | 1.13.0 |
-    | SafeTensors | 0.7.0 |
-    | Tokenizers | 0.22.2 |
-    | NumPy | 2.2.6 |
-    | Pillow | 12.1.1 |
-    | OpenCV-Python | 4.13.0.92 |
-    | tqdm | 4.67.3 |
-    | PyYAML | 6.0.3 |
-    | psutil | 7.2.2 |
-    | Rich | 15.0.0 |
-
-    ```powershell
-    conda create -n grounding_dino python=3.10 -y
-    conda activate grounding_dino
-
-    python -m pip install --upgrade pip setuptools wheel
-
-    pip install torch==2.11.0+cu128 torchvision==0.26.0+cu128 torchaudio==2.11.0+cu128 --index-url https://download.pytorch.org/whl/cu128
-
-    pip install transformers==5.7.0 accelerate==1.13.0 huggingface-hub==1.13.0 safetensors==0.7.0 tokenizers==0.22.2
-    pip install pillow==12.1.1 numpy==2.2.6 opencv-python==4.13.0.92 tqdm==4.67.3 pyyaml==6.0.3 psutil==7.2.2 rich==15.0.0
-    ```  
+```yaml
+name: grounding_dino
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu128
+      - torch==2.11.0+cu128
+      - torchvision==0.26.0+cu128
+      - torchaudio==2.11.0+cu128
+      - transformers==5.7.0
+      - accelerate==1.13.0
+      - huggingface-hub==1.13.0
+      - safetensors==0.7.0
+      - tokenizers==0.22.2
+      - numpy==2.2.6
+      - pillow==12.1.1
+      - opencv-python==4.13.0.92
+      - tqdm==4.67.3
+      - pyyaml==6.0.3
+      - psutil==7.2.2
+      - rich==15.0.0
+```
 
 ---
 
 ### 项目必要参数修改，在config.py中
 
-1.`GROUNDING_DINO_HF_HOME=r"C:\Users\lwx\.cache\huggingface"`
-这里的***lwx***需要修改成自己的用户名  
-
-2.`GROUNDING_DINO_PYTHON_PATH=r"W:\anaconda3\envs\grounding_dino\python.exe"`
+1. `GROUNDING_DINO_PYTHON_PATH=r"W:\anaconda3\envs\grounding_dino\python.exe"`
 这个地址修改成自己grounding_dino虚拟环境中python解释器的位置
 
+2. 首次启用，需要下载model到本地，修改两处config.py
+- GROUNDING_DINO_LOCAL_FILES_ONLY改为False，下好以后，就可以改成True
+- GROUNDING_DINO_STARTUP_TIMEOUT=120，加长时间，
 ---
 
 ### 项目运行
