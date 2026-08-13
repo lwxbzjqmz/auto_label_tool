@@ -1,5 +1,5 @@
 from config import(
-    MODEL_SELECT,
+    YOLOV3_MODEL_SELECT,
     YOLOV3_MBV2_MODEL_ROOT,
     YOLOV3_MBV2_MODEL_FILENAME,
     YOLOV3_MBV2_ANCHORS_FILENAME,
@@ -8,7 +8,7 @@ from config import(
 def normalize_model_select(model_select=None):
     '''处理yolo模型编号'''
     if model_select is None or model_select=="":
-        return MODEL_SELECT
+        return YOLOV3_MODEL_SELECT
 
     return model_select
 
@@ -82,3 +82,4 @@ def list_yolov3_mbv2_models():
     models.sort(key=lambda x: int(x["id"]) if x["id"].isdigit() else x["id"])
 
     return models
+

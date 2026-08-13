@@ -12,6 +12,8 @@ from config import(
 
     YOLOV3_MBV2_ORIGINAL_IMAGE_W,
     YOLOV3_MBV2_ORIGINAL_IMAGE_H,
+
+    CLASS_NAME,
 )
 
 CROP_X=YOLOV3_MBV2_CROP_X
@@ -124,7 +126,7 @@ def nms(boxes_with_scores,iou_threshold):
 
 def map_boxes_to_original_image(boxes_with_scores):
     '''把模型输入坐标映射回原始图片坐标'''
-    boxes=[]
+    class_boxes=[]
 
     scale_x=CROP_W/MODEL_INPUT_W
     scale_y=CROP_H/MODEL_INPUT_H
@@ -148,9 +150,9 @@ def map_boxes_to_original_image(boxes_with_scores):
         ymax_full=_clamp(ymax_full,0,ORIGINAL_IMAGE_H)
 
         if xmax_full-xmin_full>=1 and ymax_full-ymin_full>=1:
-            boxes.append([xmin_full,ymin_full,xmax_full,ymax_full])
+            class_boxes.append([CLASS_NAME[0],xmin_full,ymin_full,xmax_full,ymax_full])
 
-    return boxes
+    return class_boxes#带有类别名的boxes
 
 def _iou(box_a,box_b):
     '''计算两个框的IoU'''

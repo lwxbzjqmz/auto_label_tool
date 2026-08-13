@@ -4,27 +4,27 @@ from grounding_dino.detector import detect_by_large_model
 
 
 def get_detect_result(image_path,detector=None,model_select=None,grounding_dino_options=None):
-    '''自动模型选择,返回完整检测结果: boxes + objects'''
+    '''自动模型选择,返回完整检测结果: class_boxes + objects'''
     if detector is None or detector=="" or detector=="default":
         detector=DEFAULT_DETECTOR
 
     if detector=="yolo":
-        boxes=get_boxes_by_yolov3_mbv2(
+        class_boxes=get_boxes_by_yolov3_mbv2(
             image_path,
             model_select=model_select
         )
 
         objects=[]
 
-        for box in boxes:
+        for class_box in class_boxes:
             objects.append({
-                "name":"object",
-                "box":box,
+                "name":class_box[0],
+                "class_box":class_box,
                 "score":None
             })
 
         return {
-            "boxes":boxes,
+            "class_boxes":class_boxes,
             "objects":objects
         }
     
@@ -34,11 +34,22 @@ def get_detect_result(image_path,detector=None,model_select=None,grounding_dino_
             options=grounding_dino_options
         )
 
-        boxes=result.get("boxes",[])
+        class_boxes=result.get("class_boxes",[])
         objects=result.get("objects",[])
 
+        if not class_boxes and objects:
+            class_boxes=[]
+            for obj in objects:
+                box=obj.get("box",[])
+                if len(box)!=4:
+                    continue
+                class_boxes.append([
+                    obj.get("name") or "object",
+                    *box
+                ])
+
         return {
-            "boxes":boxes,
+            "class_boxes":class_boxes,
             "objects":objects
         }
     

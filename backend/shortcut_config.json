@@ -1,0 +1,14 @@
+{
+    "saveXml": "",
+    "nextImage": "",
+    "previousImage": "",
+    "clearBoxes": "",
+    "cancelSelect": "",
+    "classifyPureColor": "",
+    "groundingDinoDetect": "",
+    "deleteBox": "",
+    "reloadAnnotation": "",
+    "rejectImage": "",
+    "classifyModel": "",
+    "yoloDetect": ""
+}

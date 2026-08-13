@@ -53,9 +53,9 @@ def get_boxes_by_yolov3_mbv2(image_path,model_select=None):
         iou_threshold=YOLOV3_MBV2_NMS_IOU_THRESHOLD,
     )
 
-    boxes=map_boxes_to_original_image(boxes_with_scores)
+    class_boxes=map_boxes_to_original_image(boxes_with_scores)
 
-    return boxes
+    return class_boxes
 
 def _get_interpreter(model_select=None):
     '''加载 tflite interpreter'''

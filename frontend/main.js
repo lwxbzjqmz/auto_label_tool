@@ -9,19 +9,28 @@ const imageCountEl = document.getElementById("imageCount");
 const currentImageNameEl = document.getElementById("currentImageName");
 const statusTextEl = document.getElementById("statusText");
 const refreshBtn = document.getElementById("refreshBtn");
+const filterDefaultClassBtn = document.getElementById("filterDefaultClassBtn");
 
 const yoloDetectBtn = document.getElementById("yoloDetectBtn");
 const yoloModelDropdownBtn = document.getElementById("yoloModelDropdownBtn");
 const yoloModelDropdown = document.getElementById("yoloModelDropdown");
 const groundingDinoDetectBtn = document.getElementById("groundingDinoDetectBtn");
+const pureColorClassifyBtn = document.getElementById("pureColorClassifyBtn");
+const modelClassifyBtn = document.getElementById("modelClassifyBtn");
+const classifyModelDropdownBtn = document.getElementById("classifyModelDropdownBtn");
+const classifyModelDropdown = document.getElementById("classifyModelDropdown");
+const pickColorBtn = document.getElementById("pickColorBtn");
 let currentYoloModelId = null;
 let yoloModelCount = 0;
+let currentClassifyModelId = null;
+let classifyModelCount = 0;
 const imageSearchInput = document.getElementById("imageSearchInput");
 const rejectImageBtn = document.getElementById("rejectImageBtn");
 
 const canvas = document.getElementById("imageCanvas");
 canvas.tabIndex = 0;
 const ctx = canvas.getContext("2d");
+const canvasClassMenu = document.getElementById("canvasClassMenu");
 
 const boxListEl = document.getElementById("boxList");
 const boxCountEl = document.getElementById("boxCount");
@@ -46,10 +55,10 @@ const previewWallZoomLabel = document.getElementById("previewWallZoomLabel");
 const shortcutPreviousImageInput = document.getElementById("shortcutPreviousImageInput");
 const shortcutNextImageInput = document.getElementById("shortcutNextImageInput");
 const shortcutSaveXmlInput = document.getElementById("shortcutSaveXmlInput");
-const shortcutSavePreviousImageInput = document.getElementById("shortcutSavePreviousImageInput");
-const shortcutSaveNextImageInput = document.getElementById("shortcutSaveNextImageInput");
 const shortcutYoloDetectInput = document.getElementById("shortcutYoloDetectInput");
 const shortcutGroundingDinoDetectInput = document.getElementById("shortcutGroundingDinoDetectInput");
+const shortcutClassifyInput = document.getElementById("shortcutClassifyInput");
+const shortcutClassifyModelInput = document.getElementById("shortcutClassifyModelInput");
 const shortcutDeleteBoxInput = document.getElementById("shortcutDeleteBoxInput");
 const shortcutClearBoxesInput = document.getElementById("shortcutClearBoxesInput");
 const shortcutReloadAnnotationInput = document.getElementById("shortcutReloadAnnotationInput");
@@ -58,17 +67,29 @@ const shortcutCancelSelectInput = document.getElementById("shortcutCancelSelectI
 const saveShortcutConfigBtn = document.getElementById("saveShortcutConfigBtn");
 const resetShortcutConfigBtn = document.getElementById("resetShortcutConfigBtn");
 const shortcutRejectImageInput = document.getElementById("shortcutRejectImageInput");
+const sampledColorSwatch = document.getElementById("sampledColorSwatch");
+const sampledRgbText = document.getElementById("sampledRgbText");
+const classifyRulesList = document.getElementById("classifyRulesList");
+const saveClassifyRulesBtn = document.getElementById("saveClassifyRulesBtn");
+const reloadClassifyRulesBtn = document.getElementById("reloadClassifyRulesBtn");
 
 let allImages = [];
 let allAnnotations = {};
 let filteredImages = [];
+let isFilterDefaultClassOnly = false;
 
 let currentImageName = null;
 let currentImage = null;
 
 let boxes = [];
+let classBoxes = [];
 let boxInfos = [];
 let selectedBoxIndex = -1;
+let classifyRules = [];
+let isPickColorMode = false;
+let canvasClassMenuBoxIndex = -1;
+let lastSelectBoxShortcutIndex = -1;
+let lastSelectBoxShortcutTime = 0;
 
 let isDrawing = false;
 let startPoint = null;
@@ -145,10 +166,10 @@ const defaultShortcutConfig = {
     previousImage: "a",
     nextImage: "d",
     saveXml: "s",
-    savePreviousImage: "q",
-    saveNextImage: "e",
     yoloDetect: "y",
     groundingDinoDetect: "g",
+    classifyPureColor: "f",
+    classifyModel: "m",
     deleteBox: "delete",
     clearBoxes: "c",
     reloadAnnotation: "r",
@@ -228,6 +249,49 @@ function loadShortcutConfig() {
 
 function saveShortcutConfig(config) {
     localStorage.setItem("shortcutConfig", JSON.stringify(config));
+}
+
+
+async function fetchShortcutConfig() {
+    try {
+        const response = await fetch("/api/shortcut_config");
+        const data = await response.json();
+
+        if (!data.success || !data.config) {
+            return false;
+        }
+
+        shortcutConfig = {
+            ...defaultShortcutConfig,
+            ...data.config,
+            selectBoxKeys: defaultShortcutConfig.selectBoxKeys
+        };
+        saveShortcutConfig(shortcutConfig);
+        fillShortcutConfigInputs();
+        return true;
+    } catch (error) {
+        console.warn("读取后端快捷键配置失败，使用本地配置", error);
+        return false;
+    }
+}
+
+
+async function saveShortcutConfigToBackend(config) {
+    const response = await fetch("/api/shortcut_config", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ config })
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+        throw new Error(data.message || "Save shortcut config failed");
+    }
+
+    return data.config || config;
 }
 
 
@@ -320,16 +384,6 @@ function getShortcutInputBindings() {
             defaultValue: defaultShortcutConfig.saveXml
         },
         {
-            key: "savePreviousImage",
-            input: shortcutSavePreviousImageInput,
-            defaultValue: defaultShortcutConfig.savePreviousImage
-        },
-        {
-            key: "saveNextImage",
-            input: shortcutSaveNextImageInput,
-            defaultValue: defaultShortcutConfig.saveNextImage
-        },
-        {
             key: "yoloDetect",
             input: shortcutYoloDetectInput,
             defaultValue: defaultShortcutConfig.yoloDetect
@@ -338,6 +392,16 @@ function getShortcutInputBindings() {
             key: "groundingDinoDetect",
             input: shortcutGroundingDinoDetectInput,
             defaultValue: defaultShortcutConfig.groundingDinoDetect
+        },
+        {
+            key: "classifyPureColor",
+            input: shortcutClassifyInput,
+            defaultValue: defaultShortcutConfig.classifyPureColor
+        },
+        {
+            key: "classifyModel",
+            input: shortcutClassifyModelInput,
+            defaultValue: defaultShortcutConfig.classifyModel
         },
         {
             key: "deleteBox",
@@ -377,10 +441,30 @@ function fillShortcutConfigInputs() {
 }
 
 
+function getCurrentShortcutConfig() {
+    const bindings = getShortcutInputBindings();
+    const currentConfig = {
+        ...shortcutConfig,
+        selectBoxKeys: defaultShortcutConfig.selectBoxKeys
+    };
+
+    for (const item of bindings) {
+        // 空值表示"无快捷键"(按 Backspace 清除),不回退到默认值
+        const inputValue = item.input.value.trim();
+        currentConfig[item.key] = inputValue === "" ? "" : normalizeShortcutKey(inputValue);
+    }
+
+    return currentConfig;
+}
+
+
 function bindShortcutInputCapture() {
     const bindings = getShortcutInputBindings();
 
     for (const item of bindings) {
+        // 空输入框显示提示: Backspace 表示该功能无快捷键
+        item.input.placeholder = "无快捷键(按Backspace)";
+
         item.input.addEventListener("keydown", (event) => {
             if (event.key === "Tab") {
                 return;
@@ -389,21 +473,33 @@ function bindShortcutInputCapture() {
             event.preventDefault();
             event.stopPropagation();
 
+            if (event.key === "Backspace") {
+                item.input.value = "";
+                statusTextEl.textContent = `状态：已清除 ${item.key} 的快捷键（该功能不再绑定按键）`;
+                return;
+            }
+
             const key = normalizeShortcutKey(event.key);
 
             item.input.value = key;
-            statusTextEl.textContent = `状态：已设置 ${item.key} 快捷键为 ${key}，点击“保存快捷键”后生效`;
+            statusTextEl.textContent = `状态：已设置 ${item.key} 快捷键为 ${key}，当前已生效，保存后下次打开仍生效`;
         });
 
-        item.input.addEventListener("click", () => {
-            item.input.select();
-            statusTextEl.textContent = "状态：请按下想设置的快捷键";
+        item.input.addEventListener("mousedown", event => {
+            event.preventDefault();
+            item.input.focus();
+        });
+
+        item.input.addEventListener("click", event => {
+            event.preventDefault();
+            item.input.focus();
+            statusTextEl.textContent = "状态：请按下想设置的按键（按 Backspace 表示该功能无快捷键）";
         });
     }
 }
 
 
-function readShortcutConfigInputs() {
+async function readShortcutConfigInputs() {
     const bindings = getShortcutInputBindings();
 
     const nextConfig = {
@@ -412,7 +508,9 @@ function readShortcutConfigInputs() {
     };
 
     for (const item of bindings) {
-        const value = normalizeShortcutKey(item.input.value.trim() || item.defaultValue);
+        // 空值表示"无快捷键"(按 Backspace 清除),不回退到默认值
+        const inputValue = item.input.value.trim();
+        const value = inputValue === "" ? "" : normalizeShortcutKey(inputValue);
         nextConfig[item.key] = value;
     }
 
@@ -424,22 +522,36 @@ function readShortcutConfigInputs() {
     }
 
     shortcutConfig = nextConfig;
-    saveShortcutConfig(shortcutConfig);
-    fillShortcutConfigInputs();
-
-    statusTextEl.textContent = "状态：快捷键配置已保存";
+    try {
+        const savedConfig = await saveShortcutConfigToBackend(shortcutConfig);
+        shortcutConfig = {
+            ...defaultShortcutConfig,
+            ...savedConfig,
+            selectBoxKeys: defaultShortcutConfig.selectBoxKeys
+        };
+        saveShortcutConfig(shortcutConfig);
+        fillShortcutConfigInputs();
+        statusTextEl.textContent = "状态：快捷键配置已保存到后端";
+    } catch (error) {
+        console.error("快捷键配置保存到后端失败：", error);
+        saveShortcutConfig(shortcutConfig);
+        fillShortcutConfigInputs();
+        statusTextEl.textContent = "状态：后端保存失败，已临时保存到浏览器";
+    }
 }
 
 
-function resetShortcutConfig() {
-    shortcutConfig = {
-        ...defaultShortcutConfig
-    };
+async function resetShortcutConfig() {
+    const success = await fetchShortcutConfig();
 
-    saveShortcutConfig(shortcutConfig);
+    if (success) {
+        statusTextEl.textContent = "状态：已恢复后端保存的快捷键配置";
+        return;
+    }
+
+    shortcutConfig = loadShortcutConfig();
     fillShortcutConfigInputs();
-
-    statusTextEl.textContent = "状态：已恢复默认快捷键";
+    statusTextEl.textContent = "状态：后端读取失败，已恢复浏览器保存的快捷键配置";
 }
 
 
@@ -448,10 +560,10 @@ function findShortcutConflictMessage(config) {
         config.previousImage,
         config.nextImage,
         config.saveXml,
-        config.savePreviousImage,
-        config.saveNextImage,
         config.yoloDetect,
         config.groundingDinoDetect,
+        config.classifyPureColor,
+        config.classifyModel,
         config.deleteBox,
         config.clearBoxes,
         config.reloadAnnotation,
@@ -464,6 +576,11 @@ function findShortcutConflictMessage(config) {
 
     for (const key of keys) {
         const normalizedKey = normalizeShortcutKey(key);
+
+        // 空值表示"无快捷键",不参与重复检查(多个功能可以同时无快捷键)
+        if (!normalizedKey) {
+            continue;
+        }
 
         if (!countMap[normalizedKey]) {
             countMap[normalizedKey] = 0;
@@ -485,7 +602,7 @@ function findShortcutConflictMessage(config) {
     const reserved = defaultShortcutConfig.selectBoxKeys.map(key => normalizeShortcutKey(key));
     const usedReservedKeys = keys
         .map(key => normalizeShortcutKey(key))
-        .filter(key => reserved.includes(key));
+        .filter(key => key && reserved.includes(key));
 
     if (usedReservedKeys.length > 0) {
         return `状态：${usedReservedKeys.join(", ")} 已固定用于选择框，不能设置为其他快捷键`;
@@ -562,10 +679,14 @@ async function loadImageList() {
         allAnnotations = {};
         allImages = rawImages.map(item => {
             if (typeof item === "string") {
-                allAnnotations[item] = { boxes: [] };
+                allAnnotations[item] = { boxes: [], class_boxes: [] };
                 return item;
             }
-            allAnnotations[item.name] = { boxes: item.boxes || [] };
+            const nextClassBoxes = item.class_boxes || [];
+            allAnnotations[item.name] = {
+                boxes: classBoxesToBoxes(nextClassBoxes),
+                class_boxes: nextClassBoxes
+            };
             return item.name;
         });
         renderImageList();
@@ -670,11 +791,15 @@ function renderImageList() {
     const keyword = imageSearchInput.value.trim().toLowerCase();
 
     filteredImages = allImages.filter(imageName => {
-        if (!keyword) {
-            return true;
+        if (keyword && !imageName.toLowerCase().includes(keyword)) {
+            return false;
         }
 
-        return imageName.toLowerCase().includes(keyword);
+        if (isFilterDefaultClassOnly && !imageHasDefaultClass(imageName)) {
+            return false;
+        }
+
+        return true;
     });
 
     imageCountEl.textContent = `图片数量：${filteredImages.length} / ${allImages.length}`;
@@ -718,6 +843,43 @@ function renderImageList() {
         imageListEl.appendChild(li);
 
         drawThumbnail(imageName, previewCanvas);
+    }
+}
+
+
+function imageHasDefaultClass(imageName) {
+    const annotation = allAnnotations[imageName] || {};
+    const nextClassBoxes = annotation.class_boxes || [];
+
+    for (const classBox of nextClassBoxes) {
+        if (Array.isArray(classBox) && classBox[0] === "object") {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+function toggleDefaultClassFilter() {
+    isFilterDefaultClassOnly = !isFilterDefaultClassOnly;
+    updateDefaultClassFilterButton();
+
+    renderImageList();
+}
+
+
+function updateDefaultClassFilterButton() {
+    if (filterDefaultClassBtn) {
+        filterDefaultClassBtn.classList.toggle("active", isFilterDefaultClassOnly);
+
+        if (isFilterDefaultClassOnly) {
+            filterDefaultClassBtn.textContent = "\u53d6\u6d88\u7b5b\u9009";
+            filterDefaultClassBtn.title = "\u53d6\u6d88\u672a\u5206\u7c7b\u7b5b\u9009";
+        } else {
+            filterDefaultClassBtn.textContent = "\u7b5b\u9009\u672a\u5206\u7c7b";
+            filterDefaultClassBtn.title = "\u7b5b\u9009\u672a\u5206\u7c7b\u56fe\u7247";
+        }
     }
 }
 
@@ -1055,8 +1217,10 @@ function refreshThumbnail(imageName) {
 
 
 function selectImage(imageName) {
+    hideCanvasClassMenu();
     currentImageName = imageName;
     boxes = [];
+    classBoxes = [];
     boxInfos = [];
     selectedBoxIndex = -1;
 
@@ -1221,6 +1385,8 @@ function drawAllBoxes() {
     for (let i = 0; i < boxes.length; i++) {
         const box = boxes[i];
         const canvasBox = imageBoxToCanvasBox(box);
+        const info = boxInfos[i] || makeDefaultBoxInfo();
+        const classColor = getClassMiddleColor(info.name);
 
         const isSelected = i === selectedBoxIndex;
 
@@ -1234,12 +1400,25 @@ function drawAllBoxes() {
             canvasBox.h
         );
 
+        if (classColor) {
+            ctx.save();
+            ctx.lineWidth = isSelected ? 3 : 2;
+            ctx.strokeStyle = rgbToCss(classColor);
+            ctx.beginPath();
+            ctx.moveTo(canvasBox.x, canvasBox.y);
+            ctx.lineTo(canvasBox.x + canvasBox.w, canvasBox.y + canvasBox.h);
+            ctx.moveTo(canvasBox.x + canvasBox.w, canvasBox.y);
+            ctx.lineTo(canvasBox.x, canvasBox.y + canvasBox.h);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         const labelText = ` ${i + 1}`;
 
-        ctx.font = "bold 14px Arial";
+        ctx.font = "bold 22px Arial";
 
         const labelPaddingX = 0;
-        const labelHeight = 20;
+        const labelHeight = 28;
 
         const labelX = canvasBox.x;
         const labelY = Math.max(canvasBox.y - labelHeight, 0);
@@ -1248,7 +1427,7 @@ function drawAllBoxes() {
         ctx.fillText(
             labelText,
             labelX + labelPaddingX,
-            labelY + 15
+            labelY + 22
         );
     }
 }
@@ -1273,6 +1452,76 @@ function getMousePosition(event) {
         x: event.clientX - rect.left,
         y: event.clientY - rect.top
     };
+}
+
+
+function showCanvasClassMenu(index) {
+    if (!canvasClassMenu || index < 0 || index >= boxes.length) {
+        return;
+    }
+
+    selectedBoxIndex = index;
+    canvasClassMenuBoxIndex = index;
+
+    const canvasBox = imageBoxToCanvasBox(boxes[index]);
+    const classNames = getClassNamesFromRules();
+
+    canvasClassMenu.innerHTML = "";
+    canvasClassMenu.classList.remove("hidden");
+    canvasClassMenu.style.left = `${Math.max(0, canvasBox.x + canvasBox.w + 8)}px`;
+    canvasClassMenu.style.top = `${Math.max(0, canvasBox.y)}px`;
+
+    const title = document.createElement("div");
+    title.classList.add("canvas-class-menu-title");
+    title.textContent = `box ${index + 1}`;
+    canvasClassMenu.appendChild(title);
+
+    classNames.forEach((name, classIndex) => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.classList.add("canvas-class-menu-item");
+        item.dataset.classIndex = String(classIndex + 1);
+        item.dataset.className = name;
+        item.textContent = `${classIndex + 1}. ${name}`;
+        item.addEventListener("click", event => {
+            event.stopPropagation();
+            chooseCanvasClassByIndex(classIndex + 1);
+        });
+        canvasClassMenu.appendChild(item);
+    });
+
+    renderBoxList();
+    redrawCanvas();
+}
+
+
+function hideCanvasClassMenu() {
+    if (!canvasClassMenu) {
+        return;
+    }
+
+    canvasClassMenu.classList.add("hidden");
+    canvasClassMenu.innerHTML = "";
+    canvasClassMenuBoxIndex = -1;
+}
+
+
+function chooseCanvasClassByIndex(classNumber) {
+    if (canvasClassMenuBoxIndex < 0 || canvasClassMenuBoxIndex >= boxes.length) {
+        hideCanvasClassMenu();
+        return false;
+    }
+
+    const classNames = getClassNamesFromRules();
+    const className = classNames[classNumber - 1];
+
+    if (!className) {
+        return false;
+    }
+
+    updateBoxClassName(canvasClassMenuBoxIndex, className);
+    hideCanvasClassMenu();
+    return true;
 }
 
 
@@ -1343,6 +1592,98 @@ function makeDefaultBoxInfo() {
 }
 
 
+function classBoxesToBoxes(nextClassBoxes) {
+    const nextBoxes = [];
+
+    for (const classBox of nextClassBoxes || []) {
+        if (Array.isArray(classBox) && classBox.length === 5) {
+            nextBoxes.push(classBox.slice(1));
+        }
+    }
+
+    return nextBoxes;
+}
+
+
+function classBoxesToBoxInfos(nextClassBoxes) {
+    const nextBoxInfos = [];
+
+    for (const classBox of nextClassBoxes || []) {
+        if (Array.isArray(classBox) && classBox.length === 5) {
+            nextBoxInfos.push({
+                name: classBox[0] || "object",
+                score: null
+            });
+        }
+    }
+
+    return nextBoxInfos;
+}
+
+
+function boxesToClassBoxes(nextBoxes, nextBoxInfos) {
+    return (nextBoxes || []).map((box, index) => {
+        const info = nextBoxInfos[index] || makeDefaultBoxInfo();
+        return [info.name || "object", ...box];
+    });
+}
+
+
+function getClassNamesFromRules() {
+    const names = ["object"];
+
+    for (const rule of classifyRules || []) {
+        const name = rule.name || "";
+
+        if (name && !names.includes(name)) {
+            names.push(name);
+        }
+    }
+
+    return names;
+}
+
+
+function getClassRuleByName(name) {
+    for (const rule of classifyRules || []) {
+        if (rule.name === name) {
+            return rule;
+        }
+    }
+
+    return null;
+}
+
+
+function getClassMiddleColor(name) {
+    const rule = getClassRuleByName(name);
+
+    if (!rule) {
+        return null;
+    }
+
+    const rgbMin = normalizeRgbArray(rule.rgb_min);
+    const rgbMax = normalizeRgbArray(rule.rgb_max);
+
+    return rgbMin.map((value, index) => {
+        return Math.round((value + rgbMax[index]) / 2);
+    });
+}
+
+
+function getClassDisplayColor(name) {
+    return getClassMiddleColor(name) || [128,128,128];
+}
+
+
+function makeClassSelectOptions(currentName) {
+    return getClassNamesFromRules().map(name => {
+        const selected = name === currentName ? " selected" : "";
+        return `<option value="${escapeHtml(name)}"${selected}>${escapeHtml(name)}</option>`;
+    }).join("");
+}
+
+
 function normalizeObjectsToBoxesAndInfos(objects) {
     const nextBoxes = [];
     const nextBoxInfos = [];
@@ -1391,10 +1732,17 @@ function renderBoxList() {
         const scoreText = info.score === null || info.score === undefined
             ? "-"
             : Number(info.score).toFixed(3);
+        const classColor = getClassDisplayColor(info.name);
 
         li.innerHTML = `
             <div class="box-list-title">
-                <span>${i + 1}. ${escapeHtml(info.name)}</span>
+                <span class="box-class-main">
+                    <span class="box-class-swatch" style="background:${rgbToCss(classColor)}"></span>
+                    <span>${i + 1}.</span>
+                    <select class="box-class-select" data-index="${i}">
+                        ${makeClassSelectOptions(info.name)}
+                    </select>
+                </span>
                 <span>score: ${scoreText}</span>
             </div>
             <div class="box-list-coord">
@@ -1408,6 +1756,8 @@ function renderBoxList() {
 
         boxListEl.appendChild(li);
     }
+
+    bindBoxClassSelects();
 }
 
 
@@ -1418,6 +1768,41 @@ function escapeHtml(text) {
         .replaceAll(">","&gt;")
         .replaceAll('"',"&quot;")
         .replaceAll("'","&#039;");
+}
+
+
+function bindBoxClassSelects() {
+    const selects = boxListEl.querySelectorAll(".box-class-select");
+
+    for (const select of selects) {
+        select.addEventListener("click", event => {
+            event.stopPropagation();
+        });
+
+        select.addEventListener("change", event => {
+            const index = Number(event.target.dataset.index);
+            updateBoxClassName(index, event.target.value);
+        });
+    }
+}
+
+
+function updateBoxClassName(index, className) {
+    if (index < 0 || index >= boxes.length) {
+        return;
+    }
+
+    if (!boxInfos[index]) {
+        boxInfos[index] = makeDefaultBoxInfo();
+    }
+
+    boxInfos[index].name = className || "object";
+    classBoxes = boxesToClassBoxes(boxes, boxInfos);
+
+    renderBoxList();
+    redrawCanvas();
+
+    statusTextEl.textContent = `\u72b6\u6001\uff1a\u7b2c ${index + 1} \u4e2a\u6846\u7c7b\u522b\u5df2\u6539\u4e3a ${className || "object"}`;
 }
 
 
@@ -1452,9 +1837,11 @@ async function saveXml() {
         return false;
     }
 
+    classBoxes = boxesToClassBoxes(boxes, boxInfos);
+
     const payload = {
         image_name: currentImageName,
-        boxes: boxes
+        class_boxes: classBoxes
     };
 
     statusTextEl.textContent = "状态：正在保存 XML...";
@@ -1478,7 +1865,10 @@ async function saveXml() {
         const result = data.result;
         statusTextEl.textContent = `状态：保存成功，${result.xml_name}，框数量 ${result.box_count}`;
 
-        allAnnotations[currentImageName] = { boxes: boxes.slice() };
+        allAnnotations[currentImageName] = {
+            boxes: boxes.slice(),
+            class_boxes: classBoxes.slice()
+        };
 
         refreshThumbnail(currentImageName);
 
@@ -1509,6 +1899,8 @@ async function rejectCurrentImage() {
 
     statusTextEl.textContent = `状态：正在移入废弃区：${imageNameToReject}`;
 
+    removeRejectedImageFromView(imageNameToReject, currentIndex);
+
     try {
         const response = await fetch("/api/reject_image", {
             method: "POST",
@@ -1532,6 +1924,7 @@ async function rejectCurrentImage() {
         delete allAnnotations[imageNameToReject];
 
         boxes = [];
+        classBoxes = [];
         boxInfos = [];
         selectedBoxIndex = -1;
         currentImage = null;
@@ -1570,25 +1963,44 @@ async function rejectCurrentImage() {
     }
 }
 
-async function saveAndSelectPreviousImage() {
-    const success = await saveXml();
 
-    if (!success) {
-        return;
+function removeRejectedImageFromView(imageNameToReject, currentIndex) {
+    allImages = allImages.filter(name => name !== imageNameToReject);
+    filteredImages = filteredImages.filter(name => name !== imageNameToReject);
+    delete allAnnotations[imageNameToReject];
+
+    boxes = [];
+    classBoxes = [];
+    boxInfos = [];
+    selectedBoxIndex = -1;
+    currentImage = null;
+    currentImageName = null;
+
+    renderImageList();
+    renderBoxList();
+    redrawCanvas();
+
+    if (filteredImages.length > 0) {
+        let nextIndex = currentIndex;
+
+        if (nextIndex >= filteredImages.length) {
+            nextIndex = filteredImages.length - 1;
+        }
+
+        selectImage(filteredImages[nextIndex]);
+    } else {
+        currentImageNameEl.textContent = "\u5f53\u524d\u56fe\u7247\uff1a\u65e0";
+        if (jumpToImageInput) {
+            jumpToImageInput.value = "";
+        }
+        if (positionProgressEl) {
+            positionProgressEl.textContent = "- / -";
+        }
     }
 
-    selectPreviousImage();
-}
-
-
-async function saveAndSelectNextImage() {
-    const success = await saveXml();
-
-    if (!success) {
-        return;
+    if (typeof renderPreviewWall === "function" && isPreviewWallVisible()) {
+        renderPreviewWall();
     }
-
-    selectNextImage();
 }
 
 
@@ -1658,8 +2070,9 @@ async function loadAnnotation(imageName) {
 
         const result = data.result;
 
-        boxes = result.boxes || [];
-        boxInfos = boxes.map(() => makeDefaultBoxInfo());
+        classBoxes = result.class_boxes || [];
+        boxes = classBoxesToBoxes(classBoxes);
+        boxInfos = classBoxesToBoxInfos(classBoxes);
         selectedBoxIndex = -1;
 
         renderBoxList();
@@ -1737,14 +2150,20 @@ async function autoDetect(detector, yoloModelId) {
             return;
         }
 
-        if (Array.isArray(data.objects) && data.objects.length > 0) {
+        if (Array.isArray(data.class_boxes) && data.class_boxes.length > 0) {
+            classBoxes = data.class_boxes;
+            boxes = classBoxesToBoxes(classBoxes);
+            boxInfos = classBoxesToBoxInfos(classBoxes);
+        } else if (Array.isArray(data.objects) && data.objects.length > 0) {
             const normalized = normalizeObjectsToBoxesAndInfos(data.objects);
 
             boxes = normalized.boxes;
             boxInfos = normalized.boxInfos;
+            classBoxes = boxesToClassBoxes(boxes, boxInfos);
         } else {
-            boxes = data.boxes || [];
-            boxInfos = boxes.map(() => makeDefaultBoxInfo());
+            boxes = [];
+            classBoxes = [];
+            boxInfos = [];
         }
 
         selectedBoxIndex = -1;
@@ -1761,6 +2180,397 @@ async function autoDetect(detector, yoloModelId) {
 }
 
 
+
+async function classifyCurrentBoxes(classifier = "pure_color") {
+    if (!currentImageName) {
+        statusTextEl.textContent = "\u72b6\u6001\uff1a\u8bf7\u5148\u9009\u62e9\u4e00\u5f20\u56fe\u7247";
+        return false;
+    }
+
+    if (boxes.length === 0) {
+        statusTextEl.textContent = "\u72b6\u6001\uff1a\u5f53\u524d\u6ca1\u6709\u6846\u53ef\u5206\u7c7b";
+        return false;
+    }
+
+    classBoxes = boxesToClassBoxes(boxes, boxInfos);
+
+    const payload = {
+        image_name: currentImageName,
+        class_boxes: classBoxes,
+        classifier: classifier
+    };
+
+    if (classifier === "pure_color") {
+        try {
+            payload.rules = classifyRulesList ? collectClassifyRulesFromForm() : classifyRules;
+        } catch (error) {
+            statusTextEl.textContent = `\u72b6\u6001\uff1a\u5206\u7c7b\u9608\u503c\u65e0\u6548\uff0c${error.message}`;
+            return false;
+        }
+    } else {
+        payload.model_select = currentClassifyModelId;
+    }
+
+    const actionName = classifier === "model" ? "模型分类" : "纯色分类";
+    statusTextEl.textContent = `\u72b6\u6001\uff1a\u6b63\u5728${actionName}当前框...`;
+
+    try {
+        const response = await fetch("/api/classify", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            statusTextEl.textContent = `\u72b6\u6001\uff1a\u5206\u7c7b\u5931\u8d25\uff0c${data.message}`;
+            return false;
+        }
+
+        classBoxes = data.class_boxes || [];
+        boxes = classBoxesToBoxes(classBoxes);
+        boxInfos = classBoxesToBoxInfos(classBoxes);
+        selectedBoxIndex = -1;
+
+        renderBoxList();
+        redrawCanvas();
+        canvas.focus();
+
+        statusTextEl.textContent = `\u72b6\u6001\uff1a${actionName}完成，框数量 ${boxes.length}`;
+        return true;
+    } catch (error) {
+        console.error("\u5206\u7c7b\u8bf7\u6c42\u5931\u8d25\uff1a", error);
+        statusTextEl.textContent = "\u72b6\u6001\uff1a\u5206\u7c7b\u5931\u8d25\uff0c\u65e0\u6cd5\u8fde\u63a5\u540e\u7aef";
+        return false;
+    }
+}
+
+async function loadClassifyModels() {
+    if (!classifyModelDropdown || !modelClassifyBtn) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/classify_models");
+        const data = await response.json();
+
+        if (!data.success) {
+            statusTextEl.textContent = "状态：加载分类模型列表失败";
+            return;
+        }
+
+        classifyModelDropdown.innerHTML = "";
+        classifyModelCount = Array.isArray(data.models) ? data.models.length : 0;
+
+        if (data.default_model !== undefined && data.default_model !== null) {
+            currentClassifyModelId = String(data.default_model);
+        } else if (data.models.length > 0) {
+            currentClassifyModelId = String(data.models[0].id);
+        }
+
+        for (const model of data.models || []) {
+            const li = document.createElement("li");
+            li.textContent = model.name;
+            li.dataset.modelId = String(model.id);
+
+            if (String(model.id) === currentClassifyModelId) {
+                li.classList.add("selected");
+                modelClassifyBtn.textContent = `模型分类 ${model.id}`;
+            }
+
+            li.addEventListener("click", (event) => {
+                event.stopPropagation();
+                currentClassifyModelId = String(model.id);
+                modelClassifyBtn.textContent = `模型分类 ${model.id}`;
+                classifyModelDropdown.querySelectorAll("li").forEach(item => {
+                    item.classList.toggle("selected", item.dataset.modelId === currentClassifyModelId);
+                });
+                closeClassifyModelDropdown();
+            });
+
+            classifyModelDropdown.appendChild(li);
+        }
+    } catch (error) {
+        console.error(error);
+        statusTextEl.textContent = "状态：无法加载分类模型列表";
+    }
+}
+
+function toggleClassifyModelDropdown() {
+    if (!classifyModelDropdown) {
+        return;
+    }
+
+    classifyModelDropdown.classList.toggle("hidden");
+}
+
+function closeClassifyModelDropdown() {
+    if (!classifyModelDropdown) {
+        return;
+    }
+
+    classifyModelDropdown.classList.add("hidden");
+}
+
+async function loadClassifyRules() {
+    if (!classifyRulesList) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/classify_rules");
+        const data = await response.json();
+
+        if (!data.success) {
+            statusTextEl.textContent = `\u72b6\u6001\uff1a\u8bfb\u53d6\u5206\u7c7b\u9608\u503c\u5931\u8d25\uff0c${data.message}`;
+            return;
+        }
+
+        classifyRules = data.rules || [];
+        renderClassifyRules();
+        renderBoxList();
+        redrawCanvas();
+    } catch (error) {
+        console.error("\u8bfb\u53d6\u5206\u7c7b\u9608\u503c\u5931\u8d25\uff1a", error);
+        statusTextEl.textContent = "\u72b6\u6001\uff1a\u8bfb\u53d6\u5206\u7c7b\u9608\u503c\u5931\u8d25\uff0c\u65e0\u6cd5\u8fde\u63a5\u540e\u7aef";
+    }
+}
+
+
+function renderClassifyRules() {
+    if (!classifyRulesList) {
+        return;
+    }
+
+    classifyRulesList.innerHTML = "";
+    const header = document.createElement("div");
+    header.classList.add("classify-rule-header");
+    header.innerHTML = `
+        <div>class / RGB range</div>
+    `;
+    classifyRulesList.appendChild(header);
+
+    for (let i = 0; i < classifyRules.length; i++) {
+        const rule = classifyRules[i];
+        const name = rule.name || "object";
+
+        if (name === "object") {
+            continue;
+        }
+
+        const rgbMin = normalizeRgbArray(rule.rgb_min);
+        const rgbMax = normalizeRgbArray(rule.rgb_max);
+
+        const item = document.createElement("div");
+        item.classList.add("classify-rule-item");
+        item.dataset.index = String(i);
+        item.dataset.name = name;
+
+        item.innerHTML = `
+            <div class="rule-class-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+            <div class="rule-rgb-row">
+                <span class="rgb-swatch" style="background:${rgbToCss(rgbMin)}"></span>
+                <span class="rule-rgb-label">min</span>
+                ${makeRgbInputs("min", rgbMin)}
+            </div>
+            <div class="rule-rgb-row">
+                <span class="rgb-swatch" style="background:${rgbToCss(rgbMax)}"></span>
+                <span class="rule-rgb-label">max</span>
+                ${makeRgbInputs("max", rgbMax)}
+            </div>
+        `;
+
+        classifyRulesList.appendChild(item);
+    }
+
+    bindRgbRuleInputs();
+}
+
+
+function makeRgbInputs(kind, rgb) {
+    return ["r","g","b"].map((channel, index) => {
+        return `<input class="rgb-input" type="number" min="0" max="255" step="1" value="${rgb[index]}" data-kind="${kind}" data-channel="${channel}">`;
+    }).join("");
+}
+
+
+function bindRgbRuleInputs() {
+    const inputs = classifyRulesList.querySelectorAll(".rgb-input");
+
+    for (const input of inputs) {
+        input.addEventListener("input", () => {
+            input.value = String(clamp(Number(input.value) || 0, 0, 255));
+            updateRuleSwatches(input.closest(".classify-rule-item"));
+        });
+    }
+}
+
+
+function updateRuleSwatches(item) {
+    if (!item) {
+        return;
+    }
+
+    const minRgb = readRgbInputsByKind(item, "min");
+    const maxRgb = readRgbInputsByKind(item, "max");
+    const swatches = item.querySelectorAll(".rgb-swatch");
+
+    if (swatches[0]) {
+        swatches[0].style.background = rgbToCss(minRgb);
+    }
+    if (swatches[1]) {
+        swatches[1].style.background = rgbToCss(maxRgb);
+    }
+}
+
+
+function collectClassifyRulesFromForm() {
+    const nextRules = [];
+    const items = classifyRulesList.querySelectorAll(".classify-rule-item");
+
+    for (const item of items) {
+        const name = item.dataset.name || "";
+
+        if (!name) {
+            throw new Error("\u7c7b\u522b\u540d\u4e0d\u80fd\u4e3a\u7a7a");
+        }
+
+        nextRules.push({
+            name: name,
+            rgb_min: readRgbInputsByKind(item, "min"),
+            rgb_max: readRgbInputsByKind(item, "max")
+        });
+    }
+
+    return nextRules;
+}
+
+
+function readRgbInputsByKind(item, kind) {
+    return ["r","g","b"].map(channel => {
+        const input = item.querySelector(`.rgb-input[data-kind="${kind}"][data-channel="${channel}"]`);
+        return clamp(Number(input ? input.value : 0) || 0, 0, 255);
+    });
+}
+
+
+async function saveClassifyRules() {
+    try {
+        const rules = collectClassifyRulesFromForm();
+
+        const response = await fetch("/api/classify_rules", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ rules })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            statusTextEl.textContent = `\u72b6\u6001\uff1a\u4fdd\u5b58\u5206\u7c7b\u9608\u503c\u5931\u8d25\uff0c${data.message}`;
+            return;
+        }
+
+        classifyRules = data.rules || rules;
+        renderClassifyRules();
+        renderBoxList();
+        redrawCanvas();
+        statusTextEl.textContent = "\u72b6\u6001\uff1a\u5206\u7c7b\u9608\u503c\u5df2\u4fdd\u5b58";
+    } catch (error) {
+        console.error("\u4fdd\u5b58\u5206\u7c7b\u9608\u503c\u5931\u8d25\uff1a", error);
+        statusTextEl.textContent = `\u72b6\u6001\uff1a\u4fdd\u5b58\u5206\u7c7b\u9608\u503c\u5931\u8d25\uff0c${error.message}`;
+    }
+}
+
+
+function normalizeRgbArray(rgb) {
+    if (!Array.isArray(rgb) || rgb.length !== 3) {
+        return [0,0,0];
+    }
+
+    return rgb.map(value => clamp(Number(value) || 0, 0, 255));
+}
+
+
+function rgbToCss(rgb) {
+    const nextRgb = normalizeRgbArray(rgb);
+    return `rgb(${nextRgb[0]}, ${nextRgb[1]}, ${nextRgb[2]})`;
+}
+
+
+function togglePickColorMode() {
+    isPickColorMode = !isPickColorMode;
+
+    if (pickColorBtn) {
+        pickColorBtn.classList.toggle("active", isPickColorMode);
+    }
+
+    statusTextEl.textContent = isPickColorMode
+        ? "\u72b6\u6001\uff1a\u53d6\u8272\u6a21\u5f0f\u5df2\u5f00\u542f\uff0c\u8bf7\u70b9\u51fb\u56fe\u50cf\u5185\u90e8\u50cf\u7d20"
+        : "\u72b6\u6001\uff1a\u53d6\u8272\u6a21\u5f0f\u5df2\u5173\u95ed";
+}
+
+
+function sampleRgbAtCanvasEvent(event) {
+    if (!currentImage) {
+        statusTextEl.textContent = "\u72b6\u6001\uff1a\u8bf7\u5148\u9009\u62e9\u4e00\u5f20\u56fe\u7247";
+        return;
+    }
+
+    resizeCanvasToDisplaySize();
+    updateImageView();
+
+    const point = getMousePosition(event);
+
+    if (!isPointInsideDisplayedImage(point)) {
+        statusTextEl.textContent = "\u72b6\u6001\uff1a\u8bf7\u70b9\u51fb\u56fe\u50cf\u5185\u90e8\u53d6\u8272";
+        return;
+    }
+
+    const imagePoint = canvasPointToImagePoint(point);
+    const rgb = sampleImageRgb(imagePoint.x, imagePoint.y);
+    updateSampledRgbDisplay(rgb, imagePoint);
+    redrawCanvas();
+}
+
+
+function sampleImageRgb(x, y) {
+    const sampleCanvas = document.createElement("canvas");
+    sampleCanvas.width = currentImage.naturalWidth;
+    sampleCanvas.height = currentImage.naturalHeight;
+
+    const sampleCtx = sampleCanvas.getContext("2d");
+    sampleCtx.drawImage(currentImage, 0, 0);
+
+    const pixel = sampleCtx.getImageData(
+        clamp(x, 0, currentImage.naturalWidth - 1),
+        clamp(y, 0, currentImage.naturalHeight - 1),
+        1,
+        1
+    ).data;
+
+    return [pixel[0], pixel[1], pixel[2]];
+}
+
+
+function updateSampledRgbDisplay(rgb, imagePoint) {
+    if (sampledColorSwatch) {
+        sampledColorSwatch.style.background = rgbToCss(rgb);
+    }
+
+    if (sampledRgbText) {
+        sampledRgbText.textContent = `RGB: ${rgb[0]}, ${rgb[1]}, ${rgb[2]}  x:${imagePoint.x} y:${imagePoint.y}`;
+    }
+
+    statusTextEl.textContent = `\u72b6\u6001\uff1a\u53d6\u8272 RGB(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
+
+
 function deleteSelectedBox() {
     if (boxes.length === 0) {
         statusTextEl.textContent = "状态：当前没有框可删除";
@@ -1774,7 +2584,9 @@ function deleteSelectedBox() {
     const deletedIndex = selectedBoxIndex;
 
     boxes.splice(selectedBoxIndex, 1);
+    classBoxes.splice(selectedBoxIndex, 1);
     boxInfos.splice(selectedBoxIndex, 1);
+    hideCanvasClassMenu();
 
     if (boxes.length === 0) {
         selectedBoxIndex = -1;
@@ -1793,6 +2605,7 @@ function deleteSelectedBox() {
 
 function clearAllBoxes() {
     boxes = [];
+    classBoxes = [];
     boxInfos = [];
     selectedBoxIndex = -1;
 
@@ -1810,6 +2623,11 @@ canvas.addEventListener("mousedown", (event) => {
         return;
     }
 
+    if (isPickColorMode) {
+        sampleRgbAtCanvasEvent(event);
+        return;
+    }
+
     resizeCanvasToDisplaySize();
     updateImageView();
 
@@ -1819,6 +2637,7 @@ canvas.addEventListener("mousedown", (event) => {
         return;
     }
 
+    hideCanvasClassMenu();
     isDrawing = true;
     startPoint = point;
     currentPoint = point;
@@ -1866,6 +2685,7 @@ canvas.addEventListener("mouseup", () => {
     if (width >= 3 && height >= 3) {
         boxes.push(newBox);
         boxInfos.push(makeDefaultBoxInfo());
+        classBoxes = boxesToClassBoxes(boxes, boxInfos);
         selectedBoxIndex = boxes.length - 1;
     }
 
@@ -1954,6 +2774,30 @@ groundingDinoDetectBtn.addEventListener("click", () => {
 });
 
 refreshBtn.addEventListener("click", loadImageList);
+if (filterDefaultClassBtn) {
+    filterDefaultClassBtn.addEventListener("click", toggleDefaultClassFilter);
+}
+if (pureColorClassifyBtn) {
+    pureColorClassifyBtn.addEventListener("click", () => classifyCurrentBoxes("pure_color"));
+}
+if (modelClassifyBtn) {
+    modelClassifyBtn.addEventListener("click", () => classifyCurrentBoxes("model"));
+}
+if (classifyModelDropdownBtn) {
+    classifyModelDropdownBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleClassifyModelDropdown();
+    });
+}
+if (pickColorBtn) {
+    pickColorBtn.addEventListener("click", togglePickColorMode);
+}
+if (saveClassifyRulesBtn) {
+    saveClassifyRulesBtn.addEventListener("click", saveClassifyRules);
+}
+if (reloadClassifyRulesBtn) {
+    reloadClassifyRulesBtn.addEventListener("click", loadClassifyRules);
+}
 saveXmlBtn.addEventListener("click", saveXml);
 
 imageSearchInput.addEventListener("input", () => {
@@ -1986,6 +2830,24 @@ if (previewWallZoomSlider) {
     });
 }
 
+document.addEventListener("click", (event) => {
+    if (!classifyModelDropdown || !classifyModelDropdownBtn) {
+        return;
+    }
+    if (!classifyModelDropdownBtn.contains(event.target) && !classifyModelDropdown.contains(event.target)) {
+        closeClassifyModelDropdown();
+    }
+});
+
+document.addEventListener("click", (event) => {
+    if (!classifyModelDropdown || !classifyModelDropdownBtn) {
+        return;
+    }
+    if (!classifyModelDropdownBtn.contains(event.target) && !classifyModelDropdown.contains(event.target)) {
+        closeClassifyModelDropdown();
+    }
+});
+
 if (previewWallGrid) {
     previewWallGrid.addEventListener("wheel", (event) => {
         if (!event.ctrlKey) {
@@ -2014,53 +2876,87 @@ document.addEventListener("keydown", async (event) => {
         return;
     }
 
-    const selectBoxIndex = shortcutConfig.selectBoxKeys.findIndex(shortcut => {
+    if (canvasClassMenuBoxIndex !== -1) {
+        const classNumber = parseInt(event.key, 10);
+
+        if (classNumber >= 1 && classNumber <= 9) {
+            if (chooseCanvasClassByIndex(classNumber)) {
+                event.preventDefault();
+                return;
+            }
+        }
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            hideCanvasClassMenu();
+            return;
+        }
+    }
+
+    const activeShortcutConfig = getCurrentShortcutConfig();
+
+    const selectBoxIndex = activeShortcutConfig.selectBoxKeys.findIndex(shortcut => {
         return eventMatchesShortcut(event, shortcut);
     });
 
     if (selectBoxIndex !== -1) {
         event.preventDefault();
-        selectBoxByIndex(selectBoxIndex);
+        const now = Date.now();
+
+        if (
+            selectedBoxIndex === selectBoxIndex &&
+            lastSelectBoxShortcutIndex === selectBoxIndex &&
+            now - lastSelectBoxShortcutTime <= 450
+        ) {
+            showCanvasClassMenu(selectBoxIndex);
+            lastSelectBoxShortcutIndex = -1;
+            lastSelectBoxShortcutTime = 0;
+        } else {
+            selectBoxByIndex(selectBoxIndex);
+            hideCanvasClassMenu();
+            lastSelectBoxShortcutIndex = selectBoxIndex;
+            lastSelectBoxShortcutTime = now;
+        }
         return;
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.cancelSelect)) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.cancelSelect)) {
         event.preventDefault();
         cancelSelectedBox();
         return;
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.savePreviousImage)) {
-        event.preventDefault();
-        await saveAndSelectPreviousImage();
-        return;
-    }
-
-    if (eventMatchesShortcut(event, shortcutConfig.saveNextImage)) {
-        event.preventDefault();
-        await saveAndSelectNextImage();
-        return;
-    }
-
-    if (eventMatchesShortcut(event, shortcutConfig.saveXml)) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.saveXml)) {
         event.preventDefault();
         await saveXml();
         return;
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.previousImage)) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.classifyPureColor)) {
+        event.preventDefault();
+        await classifyCurrentBoxes("pure_color");
+        return;
+    }
+
+    if (eventMatchesShortcut(event, activeShortcutConfig.classifyModel)) {
+        event.preventDefault();
+        await classifyCurrentBoxes("model");
+        return;
+    }
+
+    if (eventMatchesShortcut(event, activeShortcutConfig.previousImage)) {
         event.preventDefault();
         selectPreviousImage();
         return;
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.nextImage)) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.nextImage)) {
         event.preventDefault();
         selectNextImage();
         return;
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.yoloDetect)) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.yoloDetect)) {
         event.preventDefault();
         autoDetect("yolo", currentYoloModelId);
         return;
@@ -2075,28 +2971,25 @@ document.addEventListener("keydown", async (event) => {
         }
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.groundingDinoDetect)) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.groundingDinoDetect)) {
         event.preventDefault();
         autoDetect("grounding_dino");
         return;
     }
 
-    if (
-        eventMatchesShortcut(event, shortcutConfig.deleteBox) ||
-        eventMatchesShortcut(event, "backspace")
-    ) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.deleteBox)) {
         event.preventDefault();
         deleteSelectedBox();
         return;
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.clearBoxes)) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.clearBoxes)) {
         event.preventDefault();
         clearAllBoxes();
         return;
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.reloadAnnotation)) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.reloadAnnotation)) {
         event.preventDefault();
 
         if (currentImageName) {
@@ -2106,7 +2999,7 @@ document.addEventListener("keydown", async (event) => {
         return;
     }
 
-    if (eventMatchesShortcut(event, shortcutConfig.rejectImage)) {
+    if (eventMatchesShortcut(event, activeShortcutConfig.rejectImage)) {
         event.preventDefault();
         await rejectCurrentImage();
         return;
@@ -2126,7 +3019,16 @@ resizeCanvasToDisplaySize();
 redrawCanvas();
 initGroundingDinoInputs();
 fetchGroundingDinoDefaults();
+loadClassifyRules();
+loadClassifyModels();
 fillShortcutConfigInputs();
 bindShortcutInputCapture();
+updateDefaultClassFilterButton();
+fetchShortcutConfig();
 loadYoloModels();
 loadImageList();
+
+
+
+
+

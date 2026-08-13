@@ -18,13 +18,13 @@ REJECTED_ANNOTATION_DIR=REJECTED_DATA_DIR/"Annotations"
 
 IMAGE_EXTENSIONS={".jpg"}#图片后缀
 
-CLASS_NAME="object"#XML中的类别名
+CLASS_NAME=['object', 'red_sandbag', 'light_blue_sandbag', 'tennis_ball', 'white_teddy_bear', 'brown_teddy_bear']#XML中的类别名的列表
 
 VOC_FOLDER_NAME="detect.class"#XML中，数据集的类别名
 
 MODEL_DIR=BASE_DIR/"models"#模型根目录
 
-MODEL_SELECT=1#模型选择flag，从1开始
+YOLOV3_MODEL_SELECT=1#YOLOv3模型选择flag，从1开始
 
 DEFAULT_DETECTOR="yolo"
 
@@ -35,12 +35,12 @@ YOLOV3_MBV2_MODEL_FILENAME="yolo3_iou_smartcar_final.tflite"
 YOLOV3_MBV2_ANCHORS_FILENAME="yolo3_anchors.txt"
 
 YOLOV3_MBV2_PC_MODEL_PATH=(YOLOV3_MBV2_MODEL_ROOT
-                           /str(MODEL_SELECT)
+                           /str(YOLOV3_MODEL_SELECT)
                            /YOLOV3_MBV2_MODEL_FILENAME)
 #模型目录，每个子目录代表一个模型变体
 
 YOLOV3_MBV2_ANCHORS_PATH=(YOLOV3_MBV2_MODEL_ROOT
-                           /str(MODEL_SELECT)
+                           /str(YOLOV3_MODEL_SELECT)
                            /YOLOV3_MBV2_ANCHORS_FILENAME)
 
 #========YOLOv3-mbv2的配置===========
@@ -97,3 +97,32 @@ GROUNDING_DINO_PYTHON_PATH=r"C:\Users\ASUS\miniconda3\envs\grounding_dino\python
 GROUNDING_DINO_WORKER_SCRIPT=BASE_DIR/"backend"/"grounding_dino/worker.py"
 
 GROUNDING_DINO_STARTUP_TIMEOUT=120
+
+#========pure_color_classify分类配置==========
+CLASSIFY_DEFAULT_CLASS_NAME="object"
+
+CLASSIFY_CENTER_RATIO=0.5#取box中间区域的比例
+
+CLASSIFIER_PURE_COLOR="pure_color"
+CLASSIFIER_MODEL="model"
+
+DEFAULT_CLASSIFIER=CLASSIFIER_PURE_COLOR
+
+#rgb均值范围,用于简单颜色分类,后续根据实际图片继续调整
+CLASSIFY_PIXEL_RULES=[{'name': 'red_sandbag', 'rgb_max': (255, 105, 105), 'rgb_min': (120, 0, 0)},
+ {'name': 'light_blue_sandbag', 'rgb_max': (90, 235, 255), 'rgb_min': (0, 70, 160)},
+ {'name': 'tennis_ball', 'rgb_max': (235, 235, 145), 'rgb_min': (90, 155, 0)},
+ {'name': 'white_teddy_bear', 'rgb_max': (255, 255, 255), 'rgb_min': (150, 150, 150)},
+ {'name': 'brown_teddy_bear', 'rgb_max': (150, 145, 115), 'rgb_min': (34, 15, 5)}]
+
+#========model_classify分类配置==========
+CLASSIFY_MODEL_ROOT=MODEL_DIR/"classify"
+# 分类模型直接放在根目录,按编号命名(1.tflite, 2.tflite, ...),
+# 与 yolov3 一样可在前端下拉选择模型;也兼容子目录(1/xxx.tflite)与旧命名 classify.tflite
+
+CLASSIFY_MODEL_FILENAME="classify.tflite"#子目录内的首选文件名,以及旧命名兼容
+
+CLASSIFY_MODEL_SELECT=1#分类模型选择flag，从1开始
+
+MODEL_CLASSIFY_PATH=CLASSIFY_MODEL_ROOT/CLASSIFY_MODEL_FILENAME#旧命名兼容路径
+

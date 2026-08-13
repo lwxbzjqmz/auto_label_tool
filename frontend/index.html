@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="color-scheme" content="light dark">
     <title>Auto Label Tool</title>
-    <link rel="stylesheet" href="/frontend/style.css">
+    <link rel="stylesheet" href="/frontend/style.css?v=20260813-keyboard-class-menu-1">
 </head>
 <body>
     <div class="app">
@@ -19,6 +19,13 @@
                 <ul id="yoloModelDropdown" class="dropdown-menu hidden"></ul>
             </span>
             <button id="groundingDinoDetectBtn" class="btn-accent">Grounding DINO标注</button>
+            <button id="pureColorClassifyBtn" class="btn-accent">纯色分类</button>
+            <span class="split-btn-group">
+                <button id="modelClassifyBtn" class="btn-accent split-btn-main">模型分类</button>
+                <button id="classifyModelDropdownBtn" class="btn-accent split-btn-arrow" title="切换分类模型">▾</button>
+                <ul id="classifyModelDropdown" class="dropdown-menu hidden"></ul>
+            </span>
+            <button id="pickColorBtn">&#21462;&#33394;</button>
 
             <button id="saveXmlBtn" class="btn-primary">保存 XML</button>
             <button id="deleteBoxBtn" class="btn-danger">删除选中框</button>
@@ -32,6 +39,10 @@
             <aside class="left-panel">
                 <div class="image-list-header">
                     <h2>图片列表</h2>
+
+                    <div class="image-list-filter-row">
+                        <button id="filterDefaultClassBtn" class="filter-default-class-btn" title="&#31579;&#36873;&#26410;&#20998;&#31867;&#22270;&#29255;">&#31579;&#36873;&#26410;&#20998;&#31867;</button>
+                    </div>
 
                     <input
                         id="imageSearchInput"
@@ -50,36 +61,37 @@
 
                 <div class="canvas-box">
                     <canvas id="imageCanvas"></canvas>
+                    <div id="canvasClassMenu" class="canvas-class-menu hidden"></div>
                 </div>
             </section>
 
             <aside class="right-panel">
-                <h2>当前信息</h2>
-                <p id="currentImageName">当前图片：无</p>
+                <h2>&#24403;&#21069;&#20449;&#24687;</h2>
+                <p id="currentImageName">&#24403;&#21069;&#22270;&#29255;&#65306;&#26080;</p>
 
                 <div class="position-indicator">
-                    <label>跳转到
-                        <input id="jumpToImageInput" type="text" placeholder="输入图片名后回车" autocomplete="off">
+                    <label>&#36339;&#36716;&#21040;
+                        <input id="jumpToImageInput" type="text" placeholder="&#36755;&#20837;&#22270;&#29255;&#21517;&#21518;&#22238;&#36710;" autocomplete="off">
                     </label>
                     <span id="positionProgress">- / -</span>
                 </div>
 
-                <p id="statusText">状态：等待加载图片</p>
+                <p id="statusText">&#29366;&#24577;&#65306;&#31561;&#24453;&#21152;&#36733;&#22270;&#29255;</p>
 
-                <h2>坐标列表</h2>
-                <div id="boxCount">框数量：0</div>
+                <h2>&#22352;&#26631;&#21015;&#34920;</h2>
+                <div id="boxCount">&#26694;&#25968;&#37327;&#65306;0</div>
                 <ul id="boxList"></ul>
 
-                <h2>Grounding DINO 参数</h2>
+                <h2>Grounding DINO &#21442;&#25968;</h2>
 
                 <div class="grounding-config">
                     <label>
-                        提示词
+                        &#25552;&#31034;&#35789;
                         <textarea id="groundingPromptInput" rows="5">tennis ball. blue bean bag without black. red bean bag. white teddy bear. brown teddy bear</textarea>
                     </label>
 
                     <label>
-                        Box阈值
+                        Box&#38408;&#20540;
                         <input
                             id="groundingBoxThresholdInput"
                             type="number"
@@ -91,7 +103,7 @@
                     </label>
 
                     <label>
-                        Text阈值
+                        Text&#38408;&#20540;
                         <input
                             id="groundingTextThresholdInput"
                             type="number"
@@ -104,11 +116,11 @@
 
                     <label class="checkbox-label">
                         <input id="groundingUseNmsInput" type="checkbox" checked>
-                        启用 NMS
+                        &#21551;&#29992; NMS
                     </label>
 
                     <label>
-                        NMS IoU阈值
+                        NMS IoU&#38408;&#20540;
                         <input
                             id="groundingNmsIouInput"
                             type="number"
@@ -119,76 +131,105 @@
                         >
                     </label>
                 </div>
-                <h2>快捷键设置</h2>
+
+                <h2>&#24555;&#25463;&#38190;&#35774;&#32622;</h2>
 
                 <div class="shortcut-config">
                     <label>
-                        上一张
+                        &#19978;&#19968;&#24352;
                         <input id="shortcutPreviousImageInput" type="text" readonly>
                     </label>
 
                     <label>
-                        下一张
+                        &#19979;&#19968;&#24352;
                         <input id="shortcutNextImageInput" type="text" readonly>
                     </label>
 
                     <label>
-                        保存 XML
+                        &#20445;&#23384; XML
                         <input id="shortcutSaveXmlInput" type="text" readonly>
                     </label>
 
                     <label>
-                        保存并上一张
-                        <input id="shortcutSavePreviousImageInput" type="text" readonly>
-                    </label>
-
-                    <label>
-                        保存并下一张
-                        <input id="shortcutSaveNextImageInput" type="text" readonly>
-                    </label>
-
-                    <label>
-                        YOLO 标注
+                        YOLO &#26631;&#27880;
                         <input id="shortcutYoloDetectInput" type="text" readonly>
                     </label>
 
                     <label>
-                        Grounding DINO 标注
+                        Grounding DINO &#26631;&#27880;
                         <input id="shortcutGroundingDinoDetectInput" type="text" readonly>
                     </label>
 
                     <label>
-                        删除框
+                        &#32431;&#33394;&#20998;&#31867;
+                        <input id="shortcutClassifyInput" type="text" readonly>
+                    </label>
+
+                    <label>
+                        &#27169;&#22411;&#20998;&#31867;
+                        <input id="shortcutClassifyModelInput" type="text" readonly>
+                    </label>
+
+                    <label>
+                        &#21024;&#38500;&#26694;
                         <input id="shortcutDeleteBoxInput" type="text" readonly>
                     </label>
 
                     <label>
-                        清空框
+                        &#28165;&#31354;&#26694;
                         <input id="shortcutClearBoxesInput" type="text" readonly>
                     </label>
 
                     <label>
-                        重新读取 XML
+                        &#37325;&#26032;&#35835;&#21462; XML
                         <input id="shortcutReloadAnnotationInput" type="text" readonly>
                     </label>
 
                     <label>
-                        取消选中
+                        &#21462;&#28040;&#36873;&#20013;
                         <input id="shortcutCancelSelectInput" type="text" readonly>
                     </label>
 
                     <label>
-                        移入废弃区
+                        &#31227;&#20837;&#24223;&#24323;&#21306;
                         <input id="shortcutRejectImageInput" type="text" readonly>
                     </label>
 
                     <div class="shortcut-config-hint">
-                        点击输入框后，按下想设置的按键。1-9 固定用于选择第几个框。
+                        &#28857;&#20987;&#36755;&#20837;&#26694;&#21518;&#65292;&#25353;&#19979;&#24819;&#35774;&#32622;&#30340;&#25353;&#38190;&#12290;&#25353; Backspace &#28165;&#38500;&#24555;&#25463;&#38190;&#65288;&#35813;&#21151;&#33021;&#19981;&#32465;&#23450;&#25353;&#38190;&#65289;&#65292;&#22810;&#20010;&#21151;&#33021;&#21487;&#20197;&#37117;&#19981;&#35774;&#24555;&#25463;&#38190;&#12290;1-9 &#22266;&#23450;&#29992;&#20110;&#36873;&#25321;&#31532;&#20960;&#20010;&#26694;&#12290;
                     </div>
 
                     <div class="shortcut-config-buttons">
-                        <button id="saveShortcutConfigBtn">保存快捷键</button>
-                        <button id="resetShortcutConfigBtn">恢复默认</button>
+                        <button id="saveShortcutConfigBtn">&#20445;&#23384;&#24555;&#25463;&#38190;</button>
+                        <button id="resetShortcutConfigBtn">&#24674;&#22797;&#21518;&#31471;&#20445;&#23384;</button>
+                    </div>
+                </div>
+
+                <h2>分类阈值</h2>
+                <div class="rgb-rule-panel">
+                    <div class="rgb-sample-box">
+                        <div>&#24403;&#21069;&#21462;&#33394;</div>
+                        <span id="sampledColorSwatch" class="rgb-swatch"></span>
+                        <span id="sampledRgbText">RGB: -</span>
+                    </div>
+
+                    <div class="color-reference-panel">
+                        <div class="color-reference-header">&#19977;&#21407;&#33394;&#21644;&#19977;&#38376;&#33394; RGB &#21442;&#32771;</div>
+                        <div class="color-reference-grid">
+                            <div class="color-reference-item"><span class="color-swatch" style="background: rgb(255,0,0)"></span><span>红</span><span>255, 0, 0</span></div>
+                            <div class="color-reference-item"><span class="color-swatch" style="background: rgb(0,255,0)"></span><span>绿</span><span>0, 255, 0</span></div>
+                            <div class="color-reference-item"><span class="color-swatch" style="background: rgb(0,0,255)"></span><span>蓝</span><span>0, 0, 255</span></div>
+                            <div class="color-reference-item"><span class="color-swatch" style="background: rgb(255,255,0)"></span><span>黄</span><span>255, 255, 0</span></div>
+                            <div class="color-reference-item"><span class="color-swatch" style="background: rgb(0,255,255)"></span><span>青</span><span>0, 255, 255</span></div>
+                            <div class="color-reference-item"><span class="color-swatch" style="background: rgb(255,0,255)"></span><span>品红</span><span>255, 0, 255</span></div>
+                        </div>
+                    </div>
+
+                    <div id="classifyRulesList" class="classify-rules-list"></div>
+
+                    <div class="classify-rules-actions">
+                        <button id="reloadClassifyRulesBtn">&#37325;&#26032;&#35835;&#21462;&#35268;&#21017;</button>
+                        <button id="saveClassifyRulesBtn" class="btn-primary">&#20445;&#23384;&#35268;&#21017;</button>
                     </div>
                 </div>
             </aside>
@@ -215,6 +256,10 @@
 
     </div>
 
-    <script src="/frontend/main.js"></script>
+    <script src="/frontend/main.js?v=20260813-keyboard-class-menu-1"></script>
 </body>
 </html>
+
+
+
+

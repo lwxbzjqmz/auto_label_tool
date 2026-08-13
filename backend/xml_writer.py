@@ -19,11 +19,11 @@ def _prettify_xml(element):
     #去掉空行
     lines=[line for line in lines if line.strip()]
     return "\n".join(lines)+"\n"
-def _normalize_box(box,image_width,image_height):
+def _normalize_box(class_box,image_width,image_height):
     '''清洗坐标'''
-    if len(box)!=4:
+    if len(class_box)!=5:
         return None
-    xmin,ymin,xmax,ymax=box
+    class_name,xmin,ymin,xmax,ymax=class_box
 
     xmin=int(round(round(float(xmin))))
     ymin=int(round(float(ymin)))
@@ -40,12 +40,15 @@ def _normalize_box(box,image_width,image_height):
     top = min(ymin, ymax)
     bottom = max(ymin, ymax)
 
+    if class_name not in CLASS_NAME:
+        raise ValueError(f"Unknowed class name:{class_name}")
+
     if right-left<1 or bottom-top<1:
         return None
     
-    return [left,top,right,bottom]
+    return [class_name,left,top,right,bottom]
 
-def write_voc_xml(image_name,boxes):
+def write_voc_xml(image_name,class_boxes):
     '''生成 voc xml'''
     image_path=IMAGE_DIR/image_name
 
@@ -89,19 +92,19 @@ def write_voc_xml(image_name,boxes):
 
     valid_boxes=[]
 
-    for box in boxes:
-        normalized_box=_normalize_box(box,image_width,image_height)
+    for class_box in class_boxes:
+        normalized_box=_normalize_box(class_box,image_width,image_height)
 
         if normalized_box is None:
             continue
 
-        xmin, ymin, xmax, ymax = normalized_box
+        class_name, xmin, ymin, xmax, ymax = normalized_box
         valid_boxes.append(normalized_box)
 
         obj = ET.SubElement(annotation, "object")
 
         name = ET.SubElement(obj, "name")
-        name.text = CLASS_NAME
+        name.text = class_name
 
         pose = ET.SubElement(obj, "pose")
         pose.text = "Unspecified"
