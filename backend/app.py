@@ -585,6 +585,8 @@ def _normalize_shortcut_config(config):
         "previousImage",
         "nextImage",
         "saveXml",
+        "saveAndPreviousImage",
+        "saveAndNextImage",
         "yoloDetect",
         "groundingDinoDetect",
         "classifyPureColor",

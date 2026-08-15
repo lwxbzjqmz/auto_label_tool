@@ -1,14 +1,16 @@
 {
-    "saveXml": "",
-    "nextImage": "",
-    "previousImage": "",
-    "clearBoxes": "",
-    "cancelSelect": "",
-    "classifyPureColor": "",
-    "groundingDinoDetect": "",
-    "deleteBox": "",
+    "previousImage": "a",
+    "groundingDinoDetect": "w",
+    "saveAndPreviousImage": "",
     "reloadAnnotation": "",
+    "saveAndNextImage": "space",
     "rejectImage": "",
+    "nextImage": "d",
+    "saveXml": "",
     "classifyModel": "",
-    "yoloDetect": ""
+    "cancelSelect": "",
+    "yoloDetect": "",
+    "clearBoxes": "",
+    "classifyPureColor": "",
+    "deleteBox": ""
 }

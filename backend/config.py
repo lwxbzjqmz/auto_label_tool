@@ -4,7 +4,8 @@ BASE_DIR=Path(__file__).resolve().parent.parent#项目根目录
 
 FRONTEND_DIR=BASE_DIR/"frontend"#前端目录
 
-DATA_DIR=BASE_DIR/"data"#数据集目录
+#DATA_DIR=BASE_DIR/"data"#数据集目录
+DATA_DIR=Path(r"W:\project\smart_car\Ant_Home_2026\vision_module\dataset\version_last\object.class")
 
 IMAGE_DIR=DATA_DIR/"JPEGImages"#图片目录
 

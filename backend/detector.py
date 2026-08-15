@@ -1,4 +1,4 @@
-from config import DEFAULT_DETECTOR
+from config import DEFAULT_DETECTOR, CLASS_NAME
 from yolov3_mbv2.detector import get_boxes_by_yolov3_mbv2
 from grounding_dino.detector import detect_by_large_model
 
@@ -47,6 +47,26 @@ def get_detect_result(image_path,detector=None,model_select=None,grounding_dino_
                     obj.get("name") or "object",
                     *box
                 ])
+
+        # Grounding DINO 输出的类别名是 prompt 自由文本,可能不在 CLASS_NAME 中,
+        # 统一改为 CLASS_NAME[0]("object"),具体类别由后续分类步骤确定
+        normalized_class_boxes=[]
+        for class_box in class_boxes:
+            if not isinstance(class_box,(list,tuple)) or len(class_box)!=5:
+                continue
+            normalized_class_boxes.append([
+                CLASS_NAME[0],
+                class_box[1],
+                class_box[2],
+                class_box[3],
+                class_box[4],
+            ])
+        class_boxes=normalized_class_boxes
+
+        normalized_objects=[]
+        for obj in objects:
+            normalized_objects.append({**obj,"name":CLASS_NAME[0]})
+        objects=normalized_objects
 
         return {
             "class_boxes":class_boxes,

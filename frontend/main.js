@@ -55,6 +55,8 @@ const previewWallZoomLabel = document.getElementById("previewWallZoomLabel");
 const shortcutPreviousImageInput = document.getElementById("shortcutPreviousImageInput");
 const shortcutNextImageInput = document.getElementById("shortcutNextImageInput");
 const shortcutSaveXmlInput = document.getElementById("shortcutSaveXmlInput");
+const shortcutSaveAndPreviousImageInput = document.getElementById("shortcutSaveAndPreviousImageInput");
+const shortcutSaveAndNextImageInput = document.getElementById("shortcutSaveAndNextImageInput");
 const shortcutYoloDetectInput = document.getElementById("shortcutYoloDetectInput");
 const shortcutGroundingDinoDetectInput = document.getElementById("shortcutGroundingDinoDetectInput");
 const shortcutClassifyInput = document.getElementById("shortcutClassifyInput");
@@ -166,6 +168,8 @@ const defaultShortcutConfig = {
     previousImage: "a",
     nextImage: "d",
     saveXml: "s",
+    saveAndPreviousImage: "q",
+    saveAndNextImage: "e",
     yoloDetect: "y",
     groundingDinoDetect: "g",
     classifyPureColor: "f",
@@ -384,6 +388,16 @@ function getShortcutInputBindings() {
             defaultValue: defaultShortcutConfig.saveXml
         },
         {
+            key: "saveAndPreviousImage",
+            input: shortcutSaveAndPreviousImageInput,
+            defaultValue: defaultShortcutConfig.saveAndPreviousImage
+        },
+        {
+            key: "saveAndNextImage",
+            input: shortcutSaveAndNextImageInput,
+            defaultValue: defaultShortcutConfig.saveAndNextImage
+        },
+        {
             key: "yoloDetect",
             input: shortcutYoloDetectInput,
             defaultValue: defaultShortcutConfig.yoloDetect
@@ -560,6 +574,8 @@ function findShortcutConflictMessage(config) {
         config.previousImage,
         config.nextImage,
         config.saveXml,
+        config.saveAndPreviousImage,
+        config.saveAndNextImage,
         config.yoloDetect,
         config.groundingDinoDetect,
         config.classifyPureColor,
@@ -1880,6 +1896,29 @@ async function saveXml() {
     }
 }
 
+
+async function saveAndSelectPreviousImage() {
+    const saveSuccess = await saveXml();
+
+    if (!saveSuccess) {
+        return;
+    }
+
+    selectPreviousImage();
+}
+
+
+async function saveAndSelectNextImage() {
+    const saveSuccess = await saveXml();
+
+    if (!saveSuccess) {
+        return;
+    }
+
+    selectNextImage();
+}
+
+
 async function rejectCurrentImage() {
     if (!currentImageName) {
         statusTextEl.textContent = "状态：请先选择一张图片";
@@ -2929,6 +2968,18 @@ document.addEventListener("keydown", async (event) => {
     if (eventMatchesShortcut(event, activeShortcutConfig.saveXml)) {
         event.preventDefault();
         await saveXml();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, activeShortcutConfig.saveAndPreviousImage)) {
+        event.preventDefault();
+        await saveAndSelectPreviousImage();
+        return;
+    }
+
+    if (eventMatchesShortcut(event, activeShortcutConfig.saveAndNextImage)) {
+        event.preventDefault();
+        await saveAndSelectNextImage();
         return;
     }
 

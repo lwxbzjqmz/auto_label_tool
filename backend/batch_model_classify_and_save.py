@@ -7,8 +7,8 @@ from xml_reader import read_voc_xml
 from config import IMAGE_DIR, CLASSIFIER_MODEL
 from pathlib import Path
 
-first_image_name="00000"
-last_image_name="04000"
+first_image_name="03699"
+last_image_name="04023"
 
 #使用的分类模型编号,对应 models/classify/<编号>.tflite,按需修改
 MODEL_SELECT=5
