@@ -6,11 +6,11 @@ from xml_writer import write_voc_xml
 from config import IMAGE_DIR
 from pathlib import Path
 
-first_image_name="03600"
-last_image_name="04022"
+first_image_name="05921"
+last_image_name="06200"
 
 # Grounding DINO 检测框阈值(box_threshold),可按需修改。
-GROUNDING_DINO_BOX_THRESHOLD=0.18
+GROUNDING_DINO_BOX_THRESHOLD=0.5
 
 def save_voc_xml(image_name):
     image_path=IMAGE_DIR/Path(image_name).with_suffix(".jpg").name

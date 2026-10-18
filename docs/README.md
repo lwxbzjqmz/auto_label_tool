@@ -124,7 +124,7 @@
 
 1. **硬件需求**：本项目需要对grounding-dino-base模型进行本地部署.
 
-- 笔者为笔记本独显 RTX 5060 Laptop GPU，模型加载的缓存为6.2G  
+- 笔者为笔记本 RTX 5060 Laptop GPU，模型加载的缓存为6.2G  
 
 2. **conda 环境**：本项目需要两个独立环境（autolabel / grounding_dino），直接用项目根目录的 yaml 文件创建（也可复制下方 yaml 内容保存为文件后使用）：
 
